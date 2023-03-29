@@ -280,12 +280,12 @@ spec:
           resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: moodle-data
-              mountPath: /bitnami/moodle
-              subPath: moodle
-            - name: moodle-data
-              mountPath: /bitnami/moodledata
-              subPath: moodledata
+            #- name: moodle-data
+            #  mountPath: /bitnami/moodle
+            #  subPath: moodle
+            #- name: moodle-data
+            #  mountPath: /bitnami/moodledata
+            #  subPath: moodledata
             {{- if .Values.extraVolumeMounts }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
