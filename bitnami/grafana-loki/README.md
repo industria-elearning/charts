@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/grafana-loki
+helm install my-release oci://registry-1.docker.io/bitnamicharts/grafana-loki
 ```
 
 ## Introduction
@@ -25,6 +24,8 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 
 [Learn more about the default configuration of the chart](https://docs.bitnami.com/kubernetes/infrastructure/grafana-loki/get-started/).
 
+Looking to use Grafana Loki in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
+
 ## Prerequisites
 
 - Kubernetes 1.19+
@@ -36,8 +37,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/grafana-loki
+helm install my-release oci://registry-1.docker.io/bitnamicharts/grafana-loki
 ```
 
 The command deploys grafana-loki on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -85,7 +85,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------- |
 | `loki.image.registry`                 | Grafana Loki image registry                                                                                  | `docker.io`             |
 | `loki.image.repository`               | Grafana Loki image repository                                                                                | `bitnami/grafana-loki`  |
-| `loki.image.tag`                      | Grafana Loki image tag (immutable tags are recommended)                                                      | `2.7.5-debian-11-r0`    |
+| `loki.image.tag`                      | Grafana Loki image tag (immutable tags are recommended)                                                      | `2.8.3-debian-11-r1`    |
 | `loki.image.digest`                   | Grafana Loki image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                    |
 | `loki.image.pullPolicy`               | Grafana Loki image pull policy                                                                               | `IfNotPresent`          |
 | `loki.image.pullSecrets`              | Grafana Loki image pull secrets                                                                              | `[]`                    |
@@ -109,6 +109,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `compactor.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for compactor nodes                               | `""`                |
 | `compactor.command`                               | Override default container command (useful when using custom images)                                | `[]`                |
 | `compactor.args`                                  | Override default container args (useful when using custom images)                                   | `[]`                |
+| `compactor.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)          | `[]`                |
 | `compactor.replicaCount`                          | Number of Compactor replicas to deploy                                                              | `1`                 |
 | `compactor.livenessProbe.enabled`                 | Enable livenessProbe on Compactor nodes                                                             | `true`              |
 | `compactor.livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                             | `60`                |
@@ -191,7 +192,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `gateway.enabled`                               | Enable Gateway deployment                                                                             | `true`                 |
 | `gateway.image.registry`                        | Nginx image registry                                                                                  | `docker.io`            |
 | `gateway.image.repository`                      | Nginx image repository                                                                                | `bitnami/nginx`        |
-| `gateway.image.tag`                             | Nginx image tag (immutable tags are recommended)                                                      | `1.23.3-debian-11-r40` |
+| `gateway.image.tag`                             | Nginx image tag (immutable tags are recommended)                                                      | `1.25.1-debian-11-r35` |
 | `gateway.image.digest`                          | Nginx image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                   |
 | `gateway.image.pullPolicy`                      | Nginx image pull policy                                                                               | `IfNotPresent`         |
 | `gateway.image.pullSecrets`                     | Nginx image pull secrets                                                                              | `[]`                   |
@@ -201,6 +202,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `gateway.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for gateway nodes                                   | `""`                   |
 | `gateway.command`                               | Override default container command (useful when using custom images)                                  | `[]`                   |
 | `gateway.args`                                  | Override default container args (useful when using custom images)                                     | `[]`                   |
+| `gateway.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)            | `[]`                   |
 | `gateway.verboseLogging`                        | Show the gateway access_log                                                                           | `false`                |
 | `gateway.replicaCount`                          | Number of Gateway replicas to deploy                                                                  | `1`                    |
 | `gateway.auth.enabled`                          | Enable basic auth                                                                                     | `false`                |
@@ -297,6 +299,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `indexGateway.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for indexGateway nodes                               | `""`            |
 | `indexGateway.command`                               | Override default container command (useful when using custom images)                                   | `[]`            |
 | `indexGateway.args`                                  | Override default container args (useful when using custom images)                                      | `[]`            |
+| `indexGateway.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)             | `[]`            |
 | `indexGateway.replicaCount`                          | Number of index-gateway replicas to deploy                                                             | `1`             |
 | `indexGateway.podManagementPolicy`                   | podManagementPolicy to manage scaling operation                                                        | `""`            |
 | `indexGateway.livenessProbe.enabled`                 | Enable livenessProbe on index-gateway nodes                                                            | `true`          |
@@ -376,6 +379,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `distributor.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for distributor nodes                               | `""`            |
 | `distributor.command`                               | Override default container command (useful when using custom images)                                  | `[]`            |
 | `distributor.args`                                  | Override default container args (useful when using custom images)                                     | `[]`            |
+| `distributor.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)            | `[]`            |
 | `distributor.replicaCount`                          | Number of Distributor replicas to deploy                                                              | `1`             |
 | `distributor.livenessProbe.enabled`                 | Enable livenessProbe on Distributor nodes                                                             | `true`          |
 | `distributor.livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                               | `10`            |
@@ -454,6 +458,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `ingester.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for ingester nodes                               | `""`            |
 | `ingester.command`                               | Override default container command (useful when using custom images)                               | `[]`            |
 | `ingester.args`                                  | Override default container args (useful when using custom images)                                  | `[]`            |
+| `ingester.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)         | `[]`            |
 | `ingester.replicaCount`                          | Number of Ingester replicas to deploy                                                              | `1`             |
 | `ingester.livenessProbe.enabled`                 | Enable livenessProbe on Ingester nodes                                                             | `true`          |
 | `ingester.livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                            | `10`            |
@@ -546,6 +551,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `querier.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for Querier nodes                               | `""`            |
 | `querier.command`                               | Override default container command (useful when using custom images)                              | `[]`            |
 | `querier.args`                                  | Override default container args (useful when using custom images)                                 | `[]`            |
+| `querier.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)        | `[]`            |
 | `querier.podManagementPolicy`                   | podManagementPolicy to manage scaling operation                                                   | `""`            |
 | `querier.livenessProbe.enabled`                 | Enable livenessProbe on Querier nodes                                                             | `true`          |
 | `querier.livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                           | `10`            |
@@ -636,6 +642,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `queryFrontend.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for queryFrontend nodes                               | `""`            |
 | `queryFrontend.command`                               | Override default container command (useful when using custom images)                                    | `[]`            |
 | `queryFrontend.args`                                  | Override default container args (useful when using custom images)                                       | `[]`            |
+| `queryFrontend.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)              | `[]`            |
 | `queryFrontend.replicaCount`                          | Number of queryFrontend replicas to deploy                                                              | `1`             |
 | `queryFrontend.livenessProbe.enabled`                 | Enable livenessProbe on queryFrontend nodes                                                             | `true`          |
 | `queryFrontend.livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                                 | `10`            |
@@ -715,6 +722,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `queryScheduler.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for queryScheduler nodes                               | `""`            |
 | `queryScheduler.command`                               | Override default container command (useful when using custom images)                                     | `[]`            |
 | `queryScheduler.args`                                  | Override default container args (useful when using custom images)                                        | `[]`            |
+| `queryScheduler.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)               | `[]`            |
 | `queryScheduler.replicaCount`                          | Number of queryScheduler replicas to deploy                                                              | `1`             |
 | `queryScheduler.livenessProbe.enabled`                 | Enable livenessProbe on queryScheduler nodes                                                             | `true`          |
 | `queryScheduler.livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                                  | `10`            |
@@ -795,6 +803,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `ruler.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for ruler nodes                               | `""`            |
 | `ruler.command`                               | Override default container command (useful when using custom images)                            | `[]`            |
 | `ruler.args`                                  | Override default container args (useful when using custom images)                               | `[]`            |
+| `ruler.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)      | `[]`            |
 | `ruler.podManagementPolicy`                   | podManagementPolicy to manage scaling operation                                                 | `""`            |
 | `ruler.replicaCount`                          | Number of Ruler replicas to deploy                                                              | `1`             |
 | `ruler.livenessProbe.enabled`                 | Enable livenessProbe on Ruler nodes                                                             | `true`          |
@@ -887,6 +896,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `tableManager.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for tableManager nodes                               | `""`            |
 | `tableManager.command`                               | Override default container command (useful when using custom images)                                   | `[]`            |
 | `tableManager.args`                                  | Override default container args (useful when using custom images)                                      | `[]`            |
+| `tableManager.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)             | `[]`            |
 | `tableManager.replicaCount`                          | Number of table-manager replicas to deploy                                                             | `1`             |
 | `tableManager.livenessProbe.enabled`                 | Enable livenessProbe on table-manager nodes                                                            | `true`          |
 | `tableManager.livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                                | `10`            |
@@ -963,7 +973,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `promtail.enabled`                               | Deploy promtail                                                                                                  | `true`               |
 | `promtail.image.registry`                        | Grafana Promtail image registry                                                                                  | `docker.io`          |
 | `promtail.image.repository`                      | Grafana Promtail image repository                                                                                | `bitnami/promtail`   |
-| `promtail.image.tag`                             | Grafana Promtail image tag (immutable tags are recommended)                                                      | `2.7.4-debian-11-r9` |
+| `promtail.image.tag`                             | Grafana Promtail image tag (immutable tags are recommended)                                                      | `2.8.3-debian-11-r1` |
 | `promtail.image.digest`                          | Grafana Promtail image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                 |
 | `promtail.image.pullPolicy`                      | Grafana Promtail image pull policy                                                                               | `IfNotPresent`       |
 | `promtail.image.pullSecrets`                     | Grafana Promtail image pull secrets                                                                              | `[]`                 |
@@ -972,6 +982,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `promtail.extraEnvVarsSecret`                    | Name of existing Secret containing extra env vars for promtail nodes                                             | `""`                 |
 | `promtail.command`                               | Override default container command (useful when using custom images)                                             | `[]`                 |
 | `promtail.args`                                  | Override default container args (useful when using custom images)                                                | `[]`                 |
+| `promtail.extraArgs`                             | Additional container args (will be concatenated to args, unless diagnosticMode is enabled)                       | `[]`                 |
 | `promtail.containerPorts.http`                   | Promtail HTTP port                                                                                               | `8080`               |
 | `promtail.livenessProbe.enabled`                 | Enable livenessProbe on Promtail nodes                                                                           | `true`               |
 | `promtail.livenessProbe.initialDelaySeconds`     | Initial delay seconds for livenessProbe                                                                          | `10`                 |
@@ -1049,18 +1060,18 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Init Container Parameters
 
-| Name                                                   | Description                                                                                                   | Value                   |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `volumePermissions.enabled`                            | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`               | `false`                 |
-| `volumePermissions.image.registry`                     | Bitnami Shell image registry                                                                                  | `docker.io`             |
-| `volumePermissions.image.repository`                   | Bitnami Shell image repository                                                                                | `bitnami/bitnami-shell` |
-| `volumePermissions.image.tag`                          | Bitnami Shell image tag (immutable tags are recommended)                                                      | `11-debian-11-r101`     |
-| `volumePermissions.image.digest`                       | Bitnami Shell image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                    |
-| `volumePermissions.image.pullPolicy`                   | Bitnami Shell image pull policy                                                                               | `IfNotPresent`          |
-| `volumePermissions.image.pullSecrets`                  | Bitnami Shell image pull secrets                                                                              | `[]`                    |
-| `volumePermissions.resources.limits`                   | The resources limits for the init container                                                                   | `{}`                    |
-| `volumePermissions.resources.requests`                 | The requested resources for the init container                                                                | `{}`                    |
-| `volumePermissions.containerSecurityContext.runAsUser` | Set init container's Security Context runAsUser                                                               | `0`                     |
+| Name                                                   | Description                                                                                                        | Value              |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `volumePermissions.enabled`                            | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`                    | `false`            |
+| `volumePermissions.image.registry`                     | OS Shell + Utility image registry                                                                                  | `docker.io`        |
+| `volumePermissions.image.repository`                   | OS Shell + Utility image repository                                                                                | `bitnami/os-shell` |
+| `volumePermissions.image.tag`                          | OS Shell + Utility image tag (immutable tags are recommended)                                                      | `11-debian-11-r13` |
+| `volumePermissions.image.digest`                       | OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`               |
+| `volumePermissions.image.pullPolicy`                   | OS Shell + Utility image pull policy                                                                               | `IfNotPresent`     |
+| `volumePermissions.image.pullSecrets`                  | OS Shell + Utility image pull secrets                                                                              | `[]`               |
+| `volumePermissions.resources.limits`                   | The resources limits for the init container                                                                        | `{}`               |
+| `volumePermissions.resources.requests`                 | The requested resources for the init container                                                                     | `{}`               |
+| `volumePermissions.containerSecurityContext.runAsUser` | Set init container's Security Context runAsUser                                                                    | `0`                |
 
 ### Other Parameters
 
@@ -1096,16 +1107,16 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Memcached Sub-chart Parameters (Chunks)
 
-| Name                                      | Description                                                                                               | Value                 |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
-| `memcachedchunks.enabled`                 | Deploy memcached sub-chart                                                                                | `true`                |
-| `memcachedchunks.image.registry`          | Memcached image registry                                                                                  | `docker.io`           |
-| `memcachedchunks.image.repository`        | Memcached image repository                                                                                | `bitnami/memcached`   |
-| `memcachedchunks.image.tag`               | Memcached image tag (immutable tags are recommended)                                                      | `1.6.19-debian-11-r6` |
-| `memcachedchunks.image.digest`            | Memcached image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
-| `memcachedchunks.nameOverride`            | override the subchart name                                                                                | `""`                  |
-| `memcachedchunks.architecture`            | Memcached architecture                                                                                    | `high-availability`   |
-| `memcachedchunks.service.ports.memcached` | Memcached service port                                                                                    | `11211`               |
+| Name                                      | Description                                                                                               | Value                  |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `memcachedchunks.enabled`                 | Deploy memcached sub-chart                                                                                | `true`                 |
+| `memcachedchunks.image.registry`          | Memcached image registry                                                                                  | `docker.io`            |
+| `memcachedchunks.image.repository`        | Memcached image repository                                                                                | `bitnami/memcached`    |
+| `memcachedchunks.image.tag`               | Memcached image tag (immutable tags are recommended)                                                      | `1.6.21-debian-11-r32` |
+| `memcachedchunks.image.digest`            | Memcached image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                   |
+| `memcachedchunks.nameOverride`            | override the subchart name                                                                                | `""`                   |
+| `memcachedchunks.architecture`            | Memcached architecture                                                                                    | `high-availability`    |
+| `memcachedchunks.service.ports.memcached` | Memcached service port                                                                                    | `11211`                |
 
 ### External Memcached (Frontend) Parameters
 
@@ -1116,16 +1127,16 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Memcached Sub-chart Parameters (Frontend)
 
-| Name                                        | Description                                                                                               | Value                 |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
-| `memcachedfrontend.enabled`                 | Deploy memcached sub-chart                                                                                | `true`                |
-| `memcachedfrontend.image.registry`          | Memcached image registry                                                                                  | `docker.io`           |
-| `memcachedfrontend.image.repository`        | Memcached image repository                                                                                | `bitnami/memcached`   |
-| `memcachedfrontend.image.tag`               | Memcached image tag (immutable tags are recommended)                                                      | `1.6.19-debian-11-r6` |
-| `memcachedfrontend.image.digest`            | Memcached image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
-| `memcachedfrontend.architecture`            | Memcached architecture                                                                                    | `high-availability`   |
-| `memcachedfrontend.nameOverride`            | override the subchart name                                                                                | `""`                  |
-| `memcachedfrontend.service.ports.memcached` | Memcached service port                                                                                    | `11211`               |
+| Name                                        | Description                                                                                               | Value                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `memcachedfrontend.enabled`                 | Deploy memcached sub-chart                                                                                | `true`                 |
+| `memcachedfrontend.image.registry`          | Memcached image registry                                                                                  | `docker.io`            |
+| `memcachedfrontend.image.repository`        | Memcached image repository                                                                                | `bitnami/memcached`    |
+| `memcachedfrontend.image.tag`               | Memcached image tag (immutable tags are recommended)                                                      | `1.6.21-debian-11-r32` |
+| `memcachedfrontend.image.digest`            | Memcached image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                   |
+| `memcachedfrontend.architecture`            | Memcached architecture                                                                                    | `high-availability`    |
+| `memcachedfrontend.nameOverride`            | override the subchart name                                                                                | `""`                   |
+| `memcachedfrontend.service.ports.memcached` | Memcached service port                                                                                    | `11211`                |
 
 ### External Memcached (Index-Queries) Parameters
 
@@ -1136,16 +1147,16 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Memcached Sub-chart Parameters (Index-Queries)
 
-| Name                                            | Description                                                                                               | Value                 |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
-| `memcachedindexqueries.enabled`                 | Deploy memcached sub-chart                                                                                | `true`                |
-| `memcachedindexqueries.image.registry`          | Memcached image registry                                                                                  | `docker.io`           |
-| `memcachedindexqueries.image.repository`        | Memcached image repository                                                                                | `bitnami/memcached`   |
-| `memcachedindexqueries.image.tag`               | Memcached image tag (immutable tags are recommended)                                                      | `1.6.19-debian-11-r6` |
-| `memcachedindexqueries.image.digest`            | Memcached image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
-| `memcachedindexqueries.architecture`            | Memcached architecture                                                                                    | `high-availability`   |
-| `memcachedindexqueries.nameOverride`            | override the subchart name                                                                                | `""`                  |
-| `memcachedindexqueries.service.ports.memcached` | Memcached service port                                                                                    | `11211`               |
+| Name                                            | Description                                                                                               | Value                  |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `memcachedindexqueries.enabled`                 | Deploy memcached sub-chart                                                                                | `true`                 |
+| `memcachedindexqueries.image.registry`          | Memcached image registry                                                                                  | `docker.io`            |
+| `memcachedindexqueries.image.repository`        | Memcached image repository                                                                                | `bitnami/memcached`    |
+| `memcachedindexqueries.image.tag`               | Memcached image tag (immutable tags are recommended)                                                      | `1.6.21-debian-11-r32` |
+| `memcachedindexqueries.image.digest`            | Memcached image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                   |
+| `memcachedindexqueries.architecture`            | Memcached architecture                                                                                    | `high-availability`    |
+| `memcachedindexqueries.nameOverride`            | override the subchart name                                                                                | `""`                   |
+| `memcachedindexqueries.service.ports.memcached` | Memcached service port                                                                                    | `11211`                |
 
 ### External Memcached (IndexWrites) Parameters
 
@@ -1156,16 +1167,16 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Memcached Sub-chart Parameters (Index-Writes)
 
-| Name                                           | Description                                                                                               | Value                 |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
-| `memcachedindexwrites.enabled`                 | Deploy memcached sub-chart                                                                                | `false`               |
-| `memcachedindexwrites.image.registry`          | Memcached image registry                                                                                  | `docker.io`           |
-| `memcachedindexwrites.image.repository`        | Memcached image repository                                                                                | `bitnami/memcached`   |
-| `memcachedindexwrites.image.tag`               | Memcached image tag (immutable tags are recommended)                                                      | `1.6.19-debian-11-r6` |
-| `memcachedindexwrites.image.digest`            | Memcached image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
-| `memcachedindexwrites.architecture`            | Memcached architecture                                                                                    | `high-availability`   |
-| `memcachedindexwrites.nameOverride`            | override the subchart name                                                                                | `""`                  |
-| `memcachedindexwrites.service.ports.memcached` | Memcached service port                                                                                    | `11211`               |
+| Name                                           | Description                                                                                               | Value                  |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `memcachedindexwrites.enabled`                 | Deploy memcached sub-chart                                                                                | `false`                |
+| `memcachedindexwrites.image.registry`          | Memcached image registry                                                                                  | `docker.io`            |
+| `memcachedindexwrites.image.repository`        | Memcached image repository                                                                                | `bitnami/memcached`    |
+| `memcachedindexwrites.image.tag`               | Memcached image tag (immutable tags are recommended)                                                      | `1.6.21-debian-11-r32` |
+| `memcachedindexwrites.image.digest`            | Memcached image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                   |
+| `memcachedindexwrites.architecture`            | Memcached architecture                                                                                    | `high-availability`    |
+| `memcachedindexwrites.nameOverride`            | override the subchart name                                                                                | `""`                   |
+| `memcachedindexwrites.service.ports.memcached` | Memcached service port                                                                                    | `11211`                |
 
 See <https://github.com/bitnami-labs/readme-generator-for-helm> to create the table.
 
@@ -1176,7 +1187,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 ```console
 helm install my-release \
   --set loki.traces.jaeger.grpc=true \
-  my-repo/grafana-loki
+  oci://registry-1.docker.io/bitnamicharts/grafana-loki
 ```
 
 The above command enables the Jaeger GRPC traces.
@@ -1184,7 +1195,7 @@ The above command enables the Jaeger GRPC traces.
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/grafana-loki
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/grafana-loki
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -1288,7 +1299,7 @@ Additionally updates the Memcached subchart to its newest major `6.x.x`, which c
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

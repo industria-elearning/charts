@@ -1,3 +1,6 @@
+# Copyright VMware, Inc.
+# SPDX-License-Identifier: APACHE-2.0
+
 name: '[CI/CD] CD Pipeline'
 on: # rebuild any PRs and main branch changes
   push:
@@ -6,6 +9,7 @@ on: # rebuild any PRs and main branch changes
     paths:
       - 'bitnami/airflow/**'
       - 'bitnami/apache/**'
+      - 'bitnami/apisix/**'
       - 'bitnami/appsmith/**'
       - 'bitnami/argo-cd/**'
       - 'bitnami/argo-workflows/**'
@@ -13,6 +17,7 @@ on: # rebuild any PRs and main branch changes
       - 'bitnami/cassandra/**'
       - 'bitnami/cert-manager/**'
       - 'bitnami/clickhouse/**'
+      - 'bitnami/common/**'
       - 'bitnami/concourse/**'
       - 'bitnami/consul/**'
       - 'bitnami/contour-operator/**'
@@ -24,7 +29,9 @@ on: # rebuild any PRs and main branch changes
       - 'bitnami/elasticsearch/**'
       - 'bitnami/etcd/**'
       - 'bitnami/external-dns/**'
+      - 'bitnami/flink/**'
       - 'bitnami/fluentd/**'
+      - 'bitnami/fluent-bit/**'
       - 'bitnami/flux/**'
       - 'bitnami/ghost/**'
       - 'bitnami/gitea/**'
@@ -34,7 +41,6 @@ on: # rebuild any PRs and main branch changes
       - 'bitnami/grafana-tempo/**'
       - 'bitnami/grafana/**'
       - 'bitnami/haproxy/**'
-      - 'bitnami/haproxy-intel/**'
       - 'bitnami/harbor/**'
       - 'bitnami/influxdb/**'
       - 'bitnami/jaeger/**'
@@ -61,6 +67,7 @@ on: # rebuild any PRs and main branch changes
       - 'bitnami/memcached/**'
       - 'bitnami/metallb/**'
       - 'bitnami/metrics-server/**'
+      - 'bitnami/milvus/**'
       - 'bitnami/minio/**'
       - 'bitnami/mongodb/**'
       - 'bitnami/mongodb-sharded/**'
@@ -70,7 +77,6 @@ on: # rebuild any PRs and main branch changes
       - 'bitnami/mysql/**'
       - 'bitnami/nats/**'
       - 'bitnami/nginx-ingress-controller/**'
-      - 'bitnami/nginx-intel/**'
       - 'bitnami/nginx/**'
       - 'bitnami/node-exporter/**'
       - 'bitnami/oauth2-proxy/**'
@@ -84,6 +90,7 @@ on: # rebuild any PRs and main branch changes
       - 'bitnami/postgresql/**'
       - 'bitnami/postgresql-ha/**'
       - 'bitnami/prestashop/**'
+      - 'bitnami/prometheus/**'
       - 'bitnami/pytorch/**'
       - 'bitnami/rabbitmq-cluster-operator/**'
       - 'bitnami/rabbitmq/**'
@@ -101,15 +108,14 @@ on: # rebuild any PRs and main branch changes
       - 'bitnami/tensorflow-resnet/**'
       - 'bitnami/thanos/**'
       - 'bitnami/tomcat/**'
-      - 'bitnami/wavefront/**'
-      - 'bitnami/wavefront-hpa-adapter/**'
-      - 'bitnami/wavefront-prometheus-storage-adapter/**'
+      - 'bitnami/vault/**'
       - 'bitnami/whereabouts/**'
       - 'bitnami/wildfly/**'
       - 'bitnami/wordpress/**'
-      - 'bitnami/wordpress-intel/**'
       - 'bitnami/zookeeper/**'
       - '!**.md'
+# Remove all permissions by default.
+permissions: {}
 env:
   CSP_API_URL: https://console.cloud.vmware.com
   CSP_API_TOKEN: ${{ secrets.CSP_API_TOKEN }}
@@ -118,6 +124,8 @@ jobs:
   get-chart:
     runs-on: ubuntu-latest
     name: 'Get modified charts'
+    permissions:
+      contents: read
     outputs:
       chart: ${{ steps.get-chart.outputs.chart }}
       result: ${{ steps.get-chart.outputs.result }}
@@ -165,6 +173,8 @@ jobs:
     needs: get-chart
     if: ${{ needs.get-chart.outputs.result == 'ok' }}
     name: VIB Publish
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v3
         name: Checkout Repository
@@ -181,14 +191,20 @@ jobs:
           if [[ -f $config_file ]]; then
             verification_mode="$(cat $config_file | grep 'verification-mode' | cut -d'=' -f2)"
           fi
+          runtime_parameters_file=""
+          if [[ -f "charts/.vib/${{ needs.get-chart.outputs.chart }}/runtime-parameters.yaml" ]]; then
+            # The path is relative to the .vib folder
+            runtime_parameters_file="${{ needs.get-chart.outputs.chart }}/runtime-parameters.yaml"
+          fi
           echo "verification_mode=${verification_mode}" >> $GITHUB_OUTPUT
-      - uses: vmware-labs/vmware-image-builder-action@main
+          echo "runtime_parameters_file=${runtime_parameters_file}" >> $GITHUB_OUTPUT
+      - uses: vmware-labs/vmware-image-builder-action@v0
         name: Verify and publish ${{ needs.get-chart.outputs.chart }}
         with:
           pipeline: ${{ needs.get-chart.outputs.chart }}/vib-publish.json
           config: charts/.vib/
           verification-mode: ${{ steps.get-asset-vib-config.outputs.verification_mode }}
-          runtime-parameters-file: ${{ needs.get-chart.outputs.chart }}/runtime-parameters.yaml
+          runtime-parameters-file: ${{ steps.get-asset-vib-config.outputs.runtime_parameters_file }}
         env:
           VIB_ENV_TARGET_PLATFORM: ${{ secrets.VIB_ENV_TARGET_PLATFORM }}
           VIB_ENV_ALTERNATIVE_TARGET_PLATFORM: ${{ secrets.VIB_ENV_ALTERNATIVE_TARGET_PLATFORM }}

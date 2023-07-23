@@ -1,6 +1,6 @@
 magentoUsername: user
 magentoPassword: ComplicatedPassword123!4
-magentoHost: vmware-magento.my
+magentoHost: magento.my
 magentoAdminUri: admin
 service:
   type: LoadBalancer
@@ -9,4 +9,5 @@ service:
 mariadb:
   enabled: true
   auth:
+    password: test_magento_password
     rootPassword: ComplicatedmariaPassword123!4

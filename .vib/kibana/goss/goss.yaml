@@ -1,3 +1,6 @@
+# Copyright VMware, Inc.
+# SPDX-License-Identifier: APACHE-2.0
+
 file:
   /bitnami/kibana:
     exists: true
@@ -15,7 +18,7 @@ file:
     exists: true
     group: root
     contains:
-    - "csp.strict: {{ .Vars.extraConfiguration.csp_strict }}"
+    - {{ toJson .Vars.extraConfiguration }}
 command:
   {{- $uid := .Vars.containerSecurityContext.runAsUser }}
   {{- $gid := .Vars.podSecurityContext.fsGroup }}

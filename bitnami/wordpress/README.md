@@ -9,8 +9,7 @@ WordPress is the world's most popular blogging and content management platform. 
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/wordpress
+helm install my-release oci://registry-1.docker.io/bitnamicharts/wordpress
 ```
 
 ## Introduction
@@ -20,6 +19,8 @@ This chart bootstraps a [WordPress](https://github.com/bitnami/containers/tree/m
 It also packages the [Bitnami MariaDB chart](https://github.com/bitnami/charts/tree/main/bitnami/mariadb) which is required for bootstrapping a MariaDB deployment for the database requirements of the WordPress application, and the [Bitnami Memcached chart](https://github.com/bitnami/charts/tree/main/bitnami/memcached) that can be used to cache database queries.
 
 Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
+
+Looking to use WordPress in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
 
 ## Prerequisites
 
@@ -33,8 +34,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/wordpress
+helm install my-release oci://registry-1.docker.io/bitnamicharts/wordpress
 ```
 
 The command deploys WordPress on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -82,7 +82,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | ------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
 | `image.registry`    | WordPress image registry                                                                                  | `docker.io`           |
 | `image.repository`  | WordPress image repository                                                                                | `bitnami/wordpress`   |
-| `image.tag`         | WordPress image tag (immutable tags are recommended)                                                      | `6.1.1-debian-11-r71` |
+| `image.tag`         | WordPress image tag (immutable tags are recommended)                                                      | `6.2.2-debian-11-r68` |
 | `image.digest`      | WordPress image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
 | `image.pullPolicy`  | WordPress image pull policy                                                                               | `IfNotPresent`        |
 | `image.pullSecrets` | WordPress image pull secrets                                                                              | `[]`                  |
@@ -143,6 +143,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `replicaCount`                                      | Number of WordPress replicas to deploy                                                                                   | `1`              |
 | `updateStrategy.type`                               | WordPress deployment strategy type                                                                                       | `RollingUpdate`  |
 | `schedulerName`                                     | Alternate scheduler                                                                                                      | `""`             |
+| `terminationGracePeriodSeconds`                     | In seconds, time given to the WordPress pod to terminate gracefully                                                      | `""`             |
 | `topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains. Evaluated as a template | `[]`             |
 | `priorityClassName`                                 | Name of the existing priority class to be used by WordPress pods, priority class needs to be created beforehand          | `""`             |
 | `hostAliases`                                       | WordPress pod host aliases                                                                                               | `[]`             |
@@ -173,6 +174,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `containerSecurityContext.runAsUser`                | Set WordPress container's Security Context runAsUser                                                                     | `1001`           |
 | `containerSecurityContext.runAsNonRoot`             | Set WordPress container's Security Context runAsNonRoot                                                                  | `true`           |
 | `containerSecurityContext.allowPrivilegeEscalation` | Set WordPress container's privilege escalation                                                                           | `false`          |
+| `containerSecurityContext.readOnlyRootFilesystem`   | Set WordPress container's Security Context readOnlyRootFilesystem                                                        | `false`          |
 | `containerSecurityContext.capabilities.drop`        | Set WordPress container's Security Context runAsNonRoot                                                                  | `["ALL"]`        |
 | `livenessProbe.enabled`                             | Enable livenessProbe on WordPress containers                                                                             | `true`           |
 | `livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                  | `120`            |
@@ -199,61 +201,61 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Traffic Exposure Parameters
 
-| Name                               | Description                                                                                                                      | Value                    |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `service.type`                     | WordPress service type                                                                                                           | `LoadBalancer`           |
-| `service.ports.http`               | WordPress service HTTP port                                                                                                      | `80`                     |
-| `service.ports.https`              | WordPress service HTTPS port                                                                                                     | `443`                    |
-| `service.httpsTargetPort`          | Target port for HTTPS                                                                                                            | `https`                  |
-| `service.nodePorts.http`           | Node port for HTTP                                                                                                               | `""`                     |
-| `service.nodePorts.https`          | Node port for HTTPS                                                                                                              | `""`                     |
-| `service.sessionAffinity`          | Control where client requests go, to the same pod or round-robin                                                                 | `None`                   |
-| `service.sessionAffinityConfig`    | Additional settings for the sessionAffinity                                                                                      | `{}`                     |
-| `service.clusterIP`                | WordPress service Cluster IP                                                                                                     | `""`                     |
-| `service.loadBalancerIP`           | WordPress service Load Balancer IP                                                                                               | `""`                     |
-| `service.loadBalancerSourceRanges` | WordPress service Load Balancer sources                                                                                          | `[]`                     |
-| `service.externalTrafficPolicy`    | WordPress service external traffic policy                                                                                        | `Cluster`                |
-| `service.annotations`              | Additional custom annotations for WordPress service                                                                              | `{}`                     |
-| `service.extraPorts`               | Extra port to expose on WordPress service                                                                                        | `[]`                     |
-| `ingress.enabled`                  | Enable ingress record generation for WordPress                                                                                   | `false`                  |
-| `ingress.pathType`                 | Ingress path type                                                                                                                | `ImplementationSpecific` |
-| `ingress.apiVersion`               | Force Ingress API version (automatically detected if not set)                                                                    | `""`                     |
-| `ingress.ingressClassName`         | IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)                                                    | `""`                     |
-| `ingress.hostname`                 | Default host for the ingress record                                                                                              | `wordpress.local`        |
-| `ingress.path`                     | Default path for the ingress record                                                                                              | `/`                      |
-| `ingress.annotations`              | Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations. | `{}`                     |
-| `ingress.tls`                      | Enable TLS configuration for the host defined at `ingress.hostname` parameter                                                    | `false`                  |
-| `ingress.tlsWwwPrefix`             | Adds www subdomain to default cert                                                                                               | `false`                  |
-| `ingress.selfSigned`               | Create a TLS secret for this ingress record using self-signed certificates generated by Helm                                     | `false`                  |
-| `ingress.extraHosts`               | An array with additional hostname(s) to be covered with the ingress record                                                       | `[]`                     |
-| `ingress.extraPaths`               | An array with additional arbitrary paths that may need to be added to the ingress under the main host                            | `[]`                     |
-| `ingress.extraTls`                 | TLS configuration for additional hostname(s) to be covered with this ingress record                                              | `[]`                     |
-| `ingress.secrets`                  | Custom TLS certificates as secrets                                                                                               | `[]`                     |
-| `ingress.extraRules`               | Additional rules to be covered with this ingress record                                                                          | `[]`                     |
+| Name                               | Description                                                                                                                                              | Value                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `service.type`                     | WordPress service type                                                                                                                                   | `LoadBalancer`           |
+| `service.ports.http`               | WordPress service HTTP port                                                                                                                              | `80`                     |
+| `service.ports.https`              | WordPress service HTTPS port                                                                                                                             | `443`                    |
+| `service.httpsTargetPort`          | Target port for HTTPS                                                                                                                                    | `https`                  |
+| `service.nodePorts.http`           | Node port for HTTP                                                                                                                                       | `""`                     |
+| `service.nodePorts.https`          | Node port for HTTPS                                                                                                                                      | `""`                     |
+| `service.sessionAffinity`          | Control where client requests go, to the same pod or round-robin                                                                                         | `None`                   |
+| `service.sessionAffinityConfig`    | Additional settings for the sessionAffinity                                                                                                              | `{}`                     |
+| `service.clusterIP`                | WordPress service Cluster IP                                                                                                                             | `""`                     |
+| `service.loadBalancerIP`           | WordPress service Load Balancer IP                                                                                                                       | `""`                     |
+| `service.loadBalancerSourceRanges` | WordPress service Load Balancer sources                                                                                                                  | `[]`                     |
+| `service.externalTrafficPolicy`    | WordPress service external traffic policy                                                                                                                | `Cluster`                |
+| `service.annotations`              | Additional custom annotations for WordPress service                                                                                                      | `{}`                     |
+| `service.extraPorts`               | Extra port to expose on WordPress service                                                                                                                | `[]`                     |
+| `ingress.enabled`                  | Enable ingress record generation for WordPress                                                                                                           | `false`                  |
+| `ingress.pathType`                 | Ingress path type                                                                                                                                        | `ImplementationSpecific` |
+| `ingress.apiVersion`               | Force Ingress API version (automatically detected if not set)                                                                                            | `""`                     |
+| `ingress.ingressClassName`         | IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)                                                                            | `""`                     |
+| `ingress.hostname`                 | Default host for the ingress record. The hostname is templated and thus can contain other variable references.                                           | `wordpress.local`        |
+| `ingress.path`                     | Default path for the ingress record                                                                                                                      | `/`                      |
+| `ingress.annotations`              | Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations.                         | `{}`                     |
+| `ingress.tls`                      | Enable TLS configuration for the host defined at `ingress.hostname` parameter                                                                            | `false`                  |
+| `ingress.tlsWwwPrefix`             | Adds www subdomain to default cert                                                                                                                       | `false`                  |
+| `ingress.selfSigned`               | Create a TLS secret for this ingress record using self-signed certificates generated by Helm                                                             | `false`                  |
+| `ingress.extraHosts`               | An array with additional hostname(s) to be covered with the ingress record. The host names are templated and thus can contain other variable references. | `[]`                     |
+| `ingress.extraPaths`               | An array with additional arbitrary paths that may need to be added to the ingress under the main host                                                    | `[]`                     |
+| `ingress.extraTls`                 | TLS configuration for additional hostname(s) to be covered with this ingress record                                                                      | `[]`                     |
+| `ingress.secrets`                  | Custom TLS certificates as secrets                                                                                                                       | `[]`                     |
+| `ingress.extraRules`               | Additional rules to be covered with this ingress record                                                                                                  | `[]`                     |
 
 ### Persistence Parameters
 
-| Name                                                   | Description                                                                                                   | Value                   |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `persistence.enabled`                                  | Enable persistence using Persistent Volume Claims                                                             | `true`                  |
-| `persistence.storageClass`                             | Persistent Volume storage class                                                                               | `""`                    |
-| `persistence.accessModes`                              | Persistent Volume access modes                                                                                | `[]`                    |
-| `persistence.accessMode`                               | Persistent Volume access mode (DEPRECATED: use `persistence.accessModes` instead)                             | `ReadWriteOnce`         |
-| `persistence.size`                                     | Persistent Volume size                                                                                        | `10Gi`                  |
-| `persistence.dataSource`                               | Custom PVC data source                                                                                        | `{}`                    |
-| `persistence.existingClaim`                            | The name of an existing PVC to use for persistence                                                            | `""`                    |
-| `persistence.selector`                                 | Selector to match an existing Persistent Volume for WordPress data PVC                                        | `{}`                    |
-| `persistence.annotations`                              | Persistent Volume Claim annotations                                                                           | `{}`                    |
-| `volumePermissions.enabled`                            | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`               | `false`                 |
-| `volumePermissions.image.registry`                     | Bitnami Shell image registry                                                                                  | `docker.io`             |
-| `volumePermissions.image.repository`                   | Bitnami Shell image repository                                                                                | `bitnami/bitnami-shell` |
-| `volumePermissions.image.tag`                          | Bitnami Shell image tag (immutable tags are recommended)                                                      | `11-debian-11-r101`     |
-| `volumePermissions.image.digest`                       | Bitnami Shell image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                    |
-| `volumePermissions.image.pullPolicy`                   | Bitnami Shell image pull policy                                                                               | `IfNotPresent`          |
-| `volumePermissions.image.pullSecrets`                  | Bitnami Shell image pull secrets                                                                              | `[]`                    |
-| `volumePermissions.resources.limits`                   | The resources limits for the init container                                                                   | `{}`                    |
-| `volumePermissions.resources.requests`                 | The requested resources for the init container                                                                | `{}`                    |
-| `volumePermissions.containerSecurityContext.runAsUser` | User ID for the init container                                                                                | `0`                     |
+| Name                                                   | Description                                                                                                        | Value              |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `persistence.enabled`                                  | Enable persistence using Persistent Volume Claims                                                                  | `true`             |
+| `persistence.storageClass`                             | Persistent Volume storage class                                                                                    | `""`               |
+| `persistence.accessModes`                              | Persistent Volume access modes                                                                                     | `[]`               |
+| `persistence.accessMode`                               | Persistent Volume access mode (DEPRECATED: use `persistence.accessModes` instead)                                  | `ReadWriteOnce`    |
+| `persistence.size`                                     | Persistent Volume size                                                                                             | `10Gi`             |
+| `persistence.dataSource`                               | Custom PVC data source                                                                                             | `{}`               |
+| `persistence.existingClaim`                            | The name of an existing PVC to use for persistence                                                                 | `""`               |
+| `persistence.selector`                                 | Selector to match an existing Persistent Volume for WordPress data PVC                                             | `{}`               |
+| `persistence.annotations`                              | Persistent Volume Claim annotations                                                                                | `{}`               |
+| `volumePermissions.enabled`                            | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`                    | `false`            |
+| `volumePermissions.image.registry`                     | OS Shell + Utility image registry                                                                                  | `docker.io`        |
+| `volumePermissions.image.repository`                   | OS Shell + Utility image repository                                                                                | `bitnami/os-shell` |
+| `volumePermissions.image.tag`                          | OS Shell + Utility image tag (immutable tags are recommended)                                                      | `11-debian-11-r13` |
+| `volumePermissions.image.digest`                       | OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`               |
+| `volumePermissions.image.pullPolicy`                   | OS Shell + Utility image pull policy                                                                               | `IfNotPresent`     |
+| `volumePermissions.image.pullSecrets`                  | OS Shell + Utility image pull secrets                                                                              | `[]`               |
+| `volumePermissions.resources.limits`                   | The resources limits for the init container                                                                        | `{}`               |
+| `volumePermissions.resources.requests`                 | The requested resources for the init container                                                                     | `{}`               |
+| `volumePermissions.containerSecurityContext.runAsUser` | User ID for the init container                                                                                     | `0`                |
 
 ### Other Parameters
 
@@ -279,7 +281,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.enabled`                            | Start a sidecar prometheus exporter to expose metrics                                                           | `false`                   |
 | `metrics.image.registry`                     | Apache exporter image registry                                                                                  | `docker.io`               |
 | `metrics.image.repository`                   | Apache exporter image repository                                                                                | `bitnami/apache-exporter` |
-| `metrics.image.tag`                          | Apache exporter image tag (immutable tags are recommended)                                                      | `0.13.1-debian-11-r0`     |
+| `metrics.image.tag`                          | Apache exporter image tag (immutable tags are recommended)                                                      | `0.13.4-debian-11-r50`    |
 | `metrics.image.digest`                       | Apache exporter image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                      |
 | `metrics.image.pullPolicy`                   | Apache exporter image pull policy                                                                               | `IfNotPresent`            |
 | `metrics.image.pullSecrets`                  | Apache exporter image pull secrets                                                                              | `[]`                      |
@@ -375,7 +377,7 @@ helm install my-release \
   --set wordpressUsername=admin \
   --set wordpressPassword=password \
   --set mariadb.auth.rootPassword=secretpassword \
-    my-repo/wordpress
+    oci://registry-1.docker.io/bitnamicharts/wordpress
 ```
 
 The above command sets the WordPress administrator account username and password to `admin` and `password` respectively. Additionally, it sets the MariaDB `root` user password to `secretpassword`.
@@ -385,7 +387,7 @@ The above command sets the WordPress administrator account username and password
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/wordpress
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/wordpress
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -511,6 +513,10 @@ To enable the new features, it is not possible to do it by upgrading an existing
 
 ## Upgrading
 
+### To 16.0.0
+
+This major release bumps the MariaDB version to 10.11. Follow the [upstream instructions](https://mariadb.com/kb/en/upgrading-from-mariadb-10-6-to-mariadb-10-11/) for upgrading from MariaDB 10.6 to 10.11. No major issues are expected during the upgrade.
+
 ### To 14.0.0
 
 This major release bumps the MariaDB version to 10.6. Follow the [upstream instructions](https://mariadb.com/kb/en/upgrading-from-mariadb-105-to-mariadb-106/) for upgrading from MariaDB 10.5 to 10.6. No major issues are expected during the upgrade.
@@ -564,13 +570,13 @@ export MARIADB_PVC=$(kubectl get pvc -l app.kubernetes.io/instance=wordpress,app
 Upgrade your release (maintaining the version) disabling MariaDB and scaling WordPress replicas to 0:
 
 ```console
-helm upgrade wordpress my-repo/wordpress --set wordpressPassword=$WORDPRESS_PASSWORD --set replicaCount=0 --set mariadb.enabled=false --version 9.6.4
+helm upgrade wordpress oci://registry-1.docker.io/bitnamicharts/wordpress --set wordpressPassword=$WORDPRESS_PASSWORD --set replicaCount=0 --set mariadb.enabled=false --version 9.6.4
 ```
 
 Finally, upgrade you release to `10.0.0` reusing the existing PVC, and enabling back MariaDB:
 
 ```console
-helm upgrade wordpress my-repo/wordpress --set mariadb.primary.persistence.existingClaim=$MARIADB_PVC --set mariadb.auth.rootPassword=$MARIADB_ROOT_PASSWORD --set mariadb.auth.password=$MARIADB_PASSWORD --set wordpressPassword=$WORDPRESS_PASSWORD
+helm upgrade wordpress oci://registry-1.docker.io/bitnamicharts/wordpress --set mariadb.primary.persistence.existingClaim=$MARIADB_PVC --set mariadb.auth.rootPassword=$MARIADB_ROOT_PASSWORD --set mariadb.auth.password=$MARIADB_PASSWORD --set wordpressPassword=$WORDPRESS_PASSWORD
 ```
 
 You should see the lines below in MariaDB container logs:
@@ -616,7 +622,7 @@ kubectl delete statefulset wordpress-mariadb --cascade=false
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

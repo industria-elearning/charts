@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/external-dns
+helm install my-release oci://registry-1.docker.io/bitnamicharts/external-dns
 ```
 
 ## Introduction
@@ -20,6 +19,8 @@ helm install my-release my-repo/external-dns
 This chart bootstraps a [ExternalDNS](https://github.com/bitnami/containers/tree/main/bitnami/external-dns) deployment on a [Kubernetes](https://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
 
 Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
+
+Looking to use ExternalDNS in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
 
 ## Prerequisites
 
@@ -31,8 +32,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/external-dns
+helm install my-release oci://registry-1.docker.io/bitnamicharts/external-dns
 ```
 
 The command deploys ExternalDNS on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -78,7 +78,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | `image.registry`                                | ExternalDNS image registry                                                                                                                                                   | `docker.io`               |
 | `image.repository`                              | ExternalDNS image repository                                                                                                                                                 | `bitnami/external-dns`    |
-| `image.tag`                                     | ExternalDNS Image tag (immutable tags are recommended)                                                                                                                       | `0.13.4-debian-11-r1`     |
+| `image.tag`                                     | ExternalDNS Image tag (immutable tags are recommended)                                                                                                                       | `0.13.4-debian-11-r19`    |
 | `image.digest`                                  | ExternalDNS image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                                                                  | `""`                      |
 | `image.pullPolicy`                              | ExternalDNS image pull policy                                                                                                                                                | `IfNotPresent`            |
 | `image.pullSecrets`                             | ExternalDNS image pull secrets                                                                                                                                               | `[]`                      |
@@ -163,6 +163,9 @@ The command removes all the Kubernetes components associated with the chart and 
 | `designate.customCA.content`                    | When using the Designate provider, set the content of the custom CA                                                                                                          | `""`                      |
 | `designate.customCA.mountPath`                  | When using the Designate provider, set the mountPath in which to mount the custom CA configuration                                                                           | `/config/designate`       |
 | `designate.customCA.filename`                   | When using the Designate provider, set the custom CA configuration filename                                                                                                  | `designate-ca.pem`        |
+| `exoscale.apiKey`                               | When using the Exoscale provider, `EXTERNAL_DNS_EXOSCALE_APIKEY` to set (optional)                                                                                           | `""`                      |
+| `exoscale.apiToken`                             | When using the Exoscale provider, `EXTERNAL_DNS_EXOSCALE_APISECRET` to set (optional)                                                                                        | `""`                      |
+| `exoscale.secretName`                           | Use an existing secret with keys "exoscale_api_key" and "exoscale_api_token" defined.                                                                                        | `""`                      |
 | `digitalocean.apiToken`                         | When using the DigitalOcean provider, `DO_TOKEN` to set (optional)                                                                                                           | `""`                      |
 | `digitalocean.secretName`                       | Use an existing secret with key "digitalocean_api_token" defined.                                                                                                            | `""`                      |
 | `google.project`                                | When using the Google provider, specify the Google project (required when provider=google)                                                                                   | `""`                      |
@@ -180,6 +183,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `infoblox.view`                                 | Infoblox view                                                                                                                                                                | `""`                      |
 | `infoblox.secretName`                           | Existing secret name, when in place wapiUsername and wapiPassword are not required                                                                                           | `""`                      |
 | `infoblox.domainFilter`                         | When using the Infoblox provider, specify the domain (optional)                                                                                                              | `""`                      |
+| `infoblox.nameRegex`                            | When using the Infoblox provider, specify the name regex filter (optional)                                                                                                   | `""`                      |
 | `infoblox.noSslVerify`                          | When using the Infoblox provider, disable SSL verification (optional)                                                                                                        | `false`                   |
 | `infoblox.wapiPort`                             | When using the Infoblox provider, specify the Infoblox WAPI port (optional)                                                                                                  | `""`                      |
 | `infoblox.wapiVersion`                          | When using the Infoblox provider, specify the Infoblox WAPI version (optional)                                                                                               | `""`                      |
@@ -344,13 +348,13 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 
 ```console
 helm install my-release \
-  --set provider=aws my-repo/external-dns
+  --set provider=aws oci://registry-1.docker.io/bitnamicharts/external-dns
 ```
 
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/external-dns
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/external-dns
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -398,7 +402,7 @@ helm install my-release \
   --set aws.zoneType=public \
   --set txtOwnerId=HOSTED_ZONE_IDENTIFIER \
   --set domainFilters[0]=HOSTED_ZONE_NAME \
-  my-repo/external-dns
+  oci://registry-1.docker.io/bitnamicharts/external-dns
 ```
 
 ## Troubleshooting
@@ -465,7 +469,7 @@ Use the workaround below to upgrade from versions previous to 1.0.0. The followi
 
 ```console
 kubectl delete deployment my-release-external-dns
-helm upgrade my-release my-repo/external-dns
+helm upgrade my-release oci://registry-1.docker.io/bitnamicharts/external-dns
 ```
 
 Other mayor changes included in this major version are:
@@ -480,7 +484,7 @@ Other mayor changes included in this major version are:
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/mastodon
+helm install my-release oci://registry-1.docker.io/bitnamicharts/mastodon
 ```
 
 ## Introduction
@@ -25,6 +24,8 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.com/) for deployment
 
 [Learn more about the default configuration of the chart](https://docs.bitnami.com/kubernetes/apps/mastodon/get-started/).
 
+Looking to use Mastodon in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
+
 ## Prerequisites
 
 - Kubernetes 1.19+
@@ -36,8 +37,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.com/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/mastodon
+helm install my-release oci://registry-1.docker.io/bitnamicharts/mastodon
 ```
 
 The command deploys Mastodon on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -81,7 +81,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `diagnosticMode.args`    | Args to override all containers in the deployment                                                                                                   | `["infinity"]`       |
 | `image.registry`         | Mastodon image registry                                                                                                                             | `docker.io`          |
 | `image.repository`       | Mastodon image repository                                                                                                                           | `bitnami/mastodon`   |
-| `image.tag`              | Mastodon image tag (immutable tags are recommended)                                                                                                 | `4.1.1-debian-11-r1` |
+| `image.tag`              | Mastodon image tag (immutable tags are recommended)                                                                                                 | `4.1.4-debian-11-r3` |
 | `image.digest`           | Mastodon image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended) | `""`                 |
 | `image.pullPolicy`       | Mastodon image pull policy                                                                                                                          | `IfNotPresent`       |
 | `image.pullSecrets`      | Mastodon image pull secrets                                                                                                                         | `[]`                 |
@@ -105,6 +105,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `extraConfigExistingSecret`      | The name of an existing Secret with your extra configuration for Mastodon                                                    | `""`                                 |
 | `enableSearches`                 | Enable the search engine (uses Elasticsearch under the hood)                                                                 | `true`                               |
 | `enableS3`                       | Enable the S3 storage engine                                                                                                 | `true`                               |
+| `forceHttpsS3Protocol`           | Force Mastodon's S3_PROTOCOL to be https (Useful when TLS is terminated using cert-manager/Ingress)                          | `false`                              |
+| `useSecureWebSocket`             | Set Mastodon's STREAMING_API_BASE_URL to use secure websocket (wss:// instead of ws://)                                      | `false`                              |
 | `local_https`                    | Set this instance to advertise itself to the fediverse using HTTPS rather than HTTP URLs. This should almost always be true. | `true`                               |
 | `localDomain`                    | The domain name used by accounts on this instance. Unless you're using                                                       | `""`                                 |
 | `webDomain`                      | Optional alternate domain used when you want to host Mastodon at a                                                           | `""`                                 |
@@ -353,6 +355,27 @@ The command removes all the Kubernetes components associated with the chart and 
 | `streaming.service.sessionAffinity`          | Control where streaming requests go, to the same pod or round-robin                           | `None`      |
 | `streaming.service.sessionAffinityConfig`    | Additional settings for the sessionAffinity                                                   | `{}`        |
 
+### Mastodon Media Management Cronjob Parameters
+
+| Name                                                | Description                                                                            | Value        |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------ |
+| `tootctlMediaManagement.enabled`                    | Enable Cronjob to manage all media caches                                              | `false`      |
+| `tootctlMediaManagement.removeAttachments`          | Enable removing attachements                                                           | `true`       |
+| `tootctlMediaManagement.removeAttachmentsDays`      | Number of days old media attachments must be for removal                               | `30`         |
+| `tootctlMediaManagement.removeCustomEmoji`          | Enable removal of cached remote emoji files                                            | `false`      |
+| `tootctlMediaManagement.removePreviewCards`         | Enable removal of cached preview cards                                                 | `false`      |
+| `tootctlMediaManagement.removePreviewCardsDays`     | Number of days old preview cards must be for removal                                   | `30`         |
+| `tootctlMediaManagement.removeAvatars`              | Enable removal of cached remote avatar images                                          | `false`      |
+| `tootctlMediaManagement.removeAvatarsDays`          | Number of days old avatar images must be for removal                                   | `30`         |
+| `tootctlMediaManagement.removeHeaders`              | Enable removal of cached profile header images                                         | `false`      |
+| `tootctlMediaManagement.removeHeadersDays`          | Number of days old header images must be for removal                                   | `30`         |
+| `tootctlMediaManagement.removeOrphans`              | Enable removal of cached orphan files                                                  | `false`      |
+| `tootctlMediaManagement.includeFollows`             | Enable removal of cached avatar and header when local users are following the accounts | `false`      |
+| `tootctlMediaManagement.cronSchedule`               | Cron job schedule to run tootctl media commands                                        | `14 3 * * *` |
+| `tootctlMediaManagement.failedJobsHistoryLimit`     | Number of failed jobs to keep                                                          | `3`          |
+| `tootctlMediaManagement.successfulJobsHistoryLimit` | Number of successful jobs to keep                                                      | `3`          |
+| `tootctlMediaManagement.concurrencyPolicy`          | Concurrency Policy.  Should be Allow, Forbid or Replace                                | `Allow`      |
+
 ### Mastodon Migration job Parameters
 
 | Name                                                        | Description                                                                                                                    | Value            |
@@ -400,17 +423,17 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Init Container Parameters
 
-| Name                                                   | Description                                                                                     | Value                   |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ----------------------- |
-| `volumePermissions.enabled`                            | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup` | `false`                 |
-| `volumePermissions.image.registry`                     | Bitnami Shell image registry                                                                    | `docker.io`             |
-| `volumePermissions.image.repository`                   | Bitnami Shell image repository                                                                  | `bitnami/bitnami-shell` |
-| `volumePermissions.image.tag`                          | Bitnami Shell image tag (immutable tags are recommended)                                        | `11-debian-11-r98`      |
-| `volumePermissions.image.pullPolicy`                   | Bitnami Shell image pull policy                                                                 | `IfNotPresent`          |
-| `volumePermissions.image.pullSecrets`                  | Bitnami Shell image pull secrets                                                                | `[]`                    |
-| `volumePermissions.resources.limits`                   | The resources limits for the init container                                                     | `{}`                    |
-| `volumePermissions.resources.requests`                 | The requested resources for the init container                                                  | `{}`                    |
-| `volumePermissions.containerSecurityContext.runAsUser` | Set init container's Security Context runAsUser                                                 | `0`                     |
+| Name                                                   | Description                                                                                     | Value              |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------ |
+| `volumePermissions.enabled`                            | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup` | `false`            |
+| `volumePermissions.image.registry`                     | OS Shell + Utility image registry                                                               | `docker.io`        |
+| `volumePermissions.image.repository`                   | OS Shell + Utility image repository                                                             | `bitnami/os-shell` |
+| `volumePermissions.image.tag`                          | OS Shell + Utility image tag (immutable tags are recommended)                                   | `11-debian-11-r2`  |
+| `volumePermissions.image.pullPolicy`                   | OS Shell + Utility image pull policy                                                            | `IfNotPresent`     |
+| `volumePermissions.image.pullSecrets`                  | OS Shell + Utility image pull secrets                                                           | `[]`               |
+| `volumePermissions.resources.limits`                   | The resources limits for the init container                                                     | `{}`               |
+| `volumePermissions.resources.requests`                 | The requested resources for the init container                                                  | `{}`               |
+| `volumePermissions.containerSecurityContext.runAsUser` | Set init container's Security Context runAsUser                                                 | `0`                |
 
 ### Other Parameters
 
@@ -541,7 +564,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 helm install my-release \
   --set adminUsername=admin \
   --set adminPassword=password \
-    my-repo/mastodon
+    oci://registry-1.docker.io/bitnamicharts/mastodon
 ```
 
 The above command sets the mastodon administrator account username and password to `admin` and `password` respectively.
@@ -551,7 +574,7 @@ The above command sets the mastodon administrator account username and password 
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/mastodon
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/mastodon
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -659,7 +682,7 @@ This major updates the MinIO&reg; subchart to its newest major, 12.0.0. This sub
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

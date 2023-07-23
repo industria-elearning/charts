@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
@@ -94,7 +99,7 @@ spec:
             - name: JASPERREPORTS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "common.names.fullname" . }}
+                  name: {{ default (include "common.names.fullname" .) .Values.jasperreportsExistingSecret | quote }}
                   key: jasperreports-password
             - name: JASPERREPORTS_EMAIL
               value: {{ .Values.jasperreportsEmail | quote }}
@@ -114,11 +119,11 @@ spec:
             - name: SMTP_USER
               value: {{ .Values.smtpUser | quote }}
             {{- end }}
-            {{- if .Values.smtpPassword }}
+            {{- if or .Values.smtpPassword .Values.smtpExistingSecret }}
             - name: SMTP_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "common.names.fullname" . }}
+                  name: {{ default (include "common.names.fullname" .) .Values.smtpExistingSecret | quote }}
                   key: smtp-password
             {{- end }}
             {{- if .Values.smtpProtocol }}

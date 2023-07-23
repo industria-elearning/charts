@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.coreDns.enabled .Values.coreDns.service.enabled }}
 apiVersion: v1
 kind: Service
@@ -8,6 +13,9 @@ metadata:
     app.kubernetes.io/component: {{ template "kube-prometheus.fullname" . }}-coredns
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.coreDns.service.labels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.coreDns.service.labels "context" $ ) | nindent 4 }}
     {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}

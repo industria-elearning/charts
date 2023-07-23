@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/fluentd
+helm install my-release oci://registry-1.docker.io/bitnamicharts/fluentd
 ```
 
 ## Introduction
@@ -20,6 +19,8 @@ helm install my-release my-repo/fluentd
 This chart bootstraps a [Fluentd](https://github.com/bitnami/containers/tree/main/bitnami/fluentd) deployment on a [Kubernetes](https://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
 
 Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
+
+Looking to use Fluentd in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
 
 ## Prerequisites
 
@@ -34,8 +35,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/fluentd
+helm install my-release oci://registry-1.docker.io/bitnamicharts/fluentd
 ```
 
 These commands deploy Fluentd on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -80,10 +80,10 @@ The command removes all the Kubernetes components associated with the chart and 
 ### Fluentd parameters
 
 | Name                                                           | Description                                                                                                                                                        | Value                                                      |
-| -------------------------------------------------------------- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---------------------------------------------------------- |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
 | `image.registry`                                               | Fluentd image registry                                                                                                                                             | `docker.io`                                                |
 | `image.repository`                                             | Fluentd image repository                                                                                                                                           | `bitnami/fluentd`                                          |
-| `image.tag`                                                    | Fluentd image tag (immutable tags are recommended)                                                                                                                 | `1.15.3-debian-11-r46`                                     |
+| `image.tag`                                                    | Fluentd image tag (immutable tags are recommended)                                                                                                                 | `1.16.2-debian-11-r0`                                      |
 | `image.pullPolicy`                                             | Fluentd image pull policy                                                                                                                                          | `IfNotPresent`                                             |
 | `image.pullSecrets`                                            | Fluentd image pull secrets                                                                                                                                         | `[]`                                                       |
 | `image.debug`                                                  | Enable image debug mode                                                                                                                                            | `false`                                                    |
@@ -188,7 +188,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `aggregator.image.registry`                                    | Fluentd aggregator image registry override                                                                                                                         | `""`                                                       |
 | `aggregator.image.repository`                                  | Fluentd aggregator image repository override                                                                                                                       | `""`                                                       |
 | `aggregator.image.tag`                                         | Fluentd aggregator image tag override (immutable tags are recommended)                                                                                             | `""`                                                       |
-| `aggregator.replicaCount`                                      | Number of aggregator pods to deploy in the Stateful Set. Will be ignored if autoscaling is enabled                                                                 | `1`                                                        |
+| `aggregator.replicaCount`                                      | Number of aggregator pods to deploy in the Stateful Set                                                                                                            | `1`                                                        |
 | `aggregator.podSecurityContext.enabled`                        | Enable security context for aggregator pods                                                                                                                        | `true`                                                     |
 | `aggregator.podSecurityContext.runAsUser`                      | User ID for aggregator's containers                                                                                                                                | `1001`                                                     |
 | `aggregator.podSecurityContext.runAsGroup`                     | Group ID for aggregator's containers                                                                                                                               | `1001`                                                     |
@@ -333,7 +333,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 
 ```console
 helm install my-release \
-  --set aggregator.port=24444 my-repo/fluentd
+  --set aggregator.port=24444 oci://registry-1.docker.io/bitnamicharts/fluentd
 ```
 
 The above command sets the aggregators to listen on port 24444.
@@ -341,7 +341,7 @@ The above command sets the aggregators to listen on port 24444.
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/fluentd
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/fluentd
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -581,7 +581,7 @@ No issues are expected in the upgrade process. However, please ensure that you a
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

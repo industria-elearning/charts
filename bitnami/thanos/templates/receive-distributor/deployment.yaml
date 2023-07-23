@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.receive.enabled ( eq .Values.receive.mode "dual-mode" ) }}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
@@ -110,7 +115,7 @@ spec:
             - --http.config=/conf/http/http-config.yml
             {{- end }}
             {{- if .Values.receiveDistributor.extraFlags }}
-            {{- .Values.receiveDistributor.extraFlags | toYaml | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.receiveDistributor.extraFlags "context" $) | nindent 12 }}
             {{- end }}
             {{- end }}
           env:

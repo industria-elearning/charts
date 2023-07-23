@@ -1,4 +1,9 @@
-{{- if .Values.speaker.metrics.enabled }}
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.speaker.enabled .Values.speaker.metrics.enabled }}
 apiVersion: v1
 kind: Service
 metadata:

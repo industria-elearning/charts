@@ -1,3 +1,6 @@
+# Copyright VMware, Inc.
+# SPDX-License-Identifier: APACHE-2.0
+
 ## @section Global parameters
 ## Global Docker image parameters
 ## Please, note that this will override the image parameters, including dependencies, configured to use the global value
@@ -73,7 +76,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: bitnami/mastodon
-  tag: 4.1.1-debian-11-r1
+  tag: 4.1.4-debian-11-r3
   digest: ""
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -148,7 +151,7 @@ defaultConfig: |
   S3_HOSTNAME: {{ include "mastodon.s3.host" . | quote }}
   S3_REGION: {{ include "mastodon.s3.region" . | quote }}
   S3_ALIAS_HOST: {{ include "mastodon.s3.aliasHost" . | quote }}
-  S3_PROTOCOL: {{ include "mastodon.s3.protocol" . | quote }}
+  S3_PROTOCOL: {{ include "mastodon.s3.protocol.setting" . | quote }}
   {{- end }}
 
 ## @param defaultSecretConfig [string] Default secret configuration for Mastodon in the form of environment variables
@@ -189,6 +192,13 @@ enableSearches: true
 ## @param enableS3 Enable the S3 storage engine
 ##
 enableS3: true
+
+## @param forceHttpsS3Protocol Force Mastodon's S3_PROTOCOL to be https (Useful when TLS is terminated using cert-manager/Ingress)
+##
+forceHttpsS3Protocol: false
+
+## @param useSecureWebSocket Set Mastodon's STREAMING_API_BASE_URL to use secure websocket (wss:// instead of ws://)
+useSecureWebSocket: false
 
 ## @param local_https Set this instance to advertise itself to the fediverse using HTTPS rather than HTTP URLs. This should almost always be true.
 ##
@@ -1044,6 +1054,44 @@ streaming:
     ##
     sessionAffinityConfig: {}
 
+## @section Mastodon Media Management Cronjob Parameters
+##
+
+tootctlMediaManagement:
+  ## @param tootctlMediaManagement.enabled Enable Cronjob to manage all media caches
+  ##
+  enabled: false
+  ## @param tootctlMediaManagement.removeAttachments Enable removing attachements
+  removeAttachments: true
+  ## @param tootctlMediaManagement.removeAttachmentsDays Number of days old media attachments must be for removal
+  removeAttachmentsDays: 30
+  ## @param tootctlMediaManagement.removeCustomEmoji Enable removal of cached remote emoji files
+  removeCustomEmoji: false
+  ## @param tootctlMediaManagement.removePreviewCards Enable removal of cached preview cards
+  removePreviewCards: false
+  ## @param tootctlMediaManagement.removePreviewCardsDays Number of days old preview cards must be for removal
+  removePreviewCardsDays: 30
+  ## @param tootctlMediaManagement.removeAvatars Enable removal of cached remote avatar images
+  removeAvatars: false
+  ## @param tootctlMediaManagement.removeAvatarsDays Number of days old avatar images must be for removal
+  removeAvatarsDays: 30
+  ## @param tootctlMediaManagement.removeHeaders Enable removal of cached profile header images
+  removeHeaders: false
+  ## @param tootctlMediaManagement.removeHeadersDays Number of days old header images must be for removal
+  removeHeadersDays: 30
+  ## @param tootctlMediaManagement.removeOrphans Enable removal of cached orphan files
+  removeOrphans: false
+  ## @param tootctlMediaManagement.includeFollows Enable removal of cached avatar and header when local users are following the accounts
+  includeFollows: false
+  ## @param tootctlMediaManagement.cronSchedule Cron job schedule to run tootctl media commands
+  cronSchedule: '14 3 * * *'
+  ## @param tootctlMediaManagement.failedJobsHistoryLimit Number of failed jobs to keep
+  failedJobsHistoryLimit: 3
+  ## @param tootctlMediaManagement.successfulJobsHistoryLimit Number of successful jobs to keep
+  successfulJobsHistoryLimit: 3
+  ## @param tootctlMediaManagement.concurrencyPolicy Concurrency Policy.  Should be Allow, Forbid or Replace
+  concurrencyPolicy: Allow
+  
 ## @section Mastodon Migration job Parameters
 ##
 
@@ -1197,18 +1245,18 @@ volumePermissions:
   ## @param volumePermissions.enabled Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`
   ##
   enabled: false
-  ## Bitnami Shell image
-  ## ref: https://hub.docker.com/r/bitnami/bitnami-shell/tags/
-  ## @param volumePermissions.image.registry Bitnami Shell image registry
-  ## @param volumePermissions.image.repository Bitnami Shell image repository
-  ## @param volumePermissions.image.tag Bitnami Shell image tag (immutable tags are recommended)
-  ## @param volumePermissions.image.pullPolicy Bitnami Shell image pull policy
-  ## @param volumePermissions.image.pullSecrets Bitnami Shell image pull secrets
+  ## OS Shell + Utility image
+  ## ref: https://hub.docker.com/r/bitnami/os-shell/tags/
+  ## @param volumePermissions.image.registry OS Shell + Utility image registry
+  ## @param volumePermissions.image.repository OS Shell + Utility image repository
+  ## @param volumePermissions.image.tag OS Shell + Utility image tag (immutable tags are recommended)
+  ## @param volumePermissions.image.pullPolicy OS Shell + Utility image pull policy
+  ## @param volumePermissions.image.pullSecrets OS Shell + Utility image pull secrets
   ##
   image:
     registry: docker.io
-    repository: bitnami/bitnami-shell
-    tag: 11-debian-11-r98
+    repository: bitnami/os-shell
+    tag: 11-debian-11-r2
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.

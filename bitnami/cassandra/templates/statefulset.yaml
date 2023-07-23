@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: {{ include "common.capabilities.statefulset.apiVersion" . }}
 kind: StatefulSet
 metadata:
@@ -153,7 +158,8 @@ spec:
                   -srcstoretype PKCS12 \
                   -srcstorepass "${CASSANDRA_KEYSTORE_PASSWORD}" \
                   -deststorepass "${CASSANDRA_KEYSTORE_PASSWORD}" \
-                  -destkeystore "/opt/bitnami/cassandra/certs/keystore"
+                  -destkeystore "/opt/bitnami/cassandra/certs/keystore" \
+                  -noprompt
               rm "/tmp/keystore.p12"
               keytool -import -file "/certs/ca.crt" \
                       -keystore "/opt/bitnami/cassandra/certs/truststore" \
@@ -544,12 +550,18 @@ spec:
         {{- if .Values.extraVolumes }}
         {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
-  {{- if not .Values.persistence.enabled }}
+  {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ tpl .Values.persistence.existingClaim $ }}
+  {{- else if not .Values.persistence.enabled }}
         - name: data
           emptyDir: {}
   {{- else }}
   volumeClaimTemplates:
-    - metadata:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
         name: data
         labels: {{- include "common.labels.matchLabels" . | nindent 10 }}
         {{- if .Values.persistence.annotations }}

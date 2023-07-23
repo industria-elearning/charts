@@ -1,3 +1,6 @@
+# Copyright VMware, Inc.
+# SPDX-License-Identifier: APACHE-2.0
+
 ## @section Global parameters
 ## Global Docker image parameters
 ## Please, note that this will override the image parameters, including dependencies, configured to use the global value
@@ -70,7 +73,7 @@ diagnosticMode:
 image:
   registry: docker.io
   repository: bitnami/etcd
-  tag: 3.5.7-debian-11-r14
+  tag: 3.5.9-debian-11-r24
   digest: ""
   ## @param image.pullPolicy etcd image pull policy
   ## Specify a imagePullPolicy
@@ -215,7 +218,7 @@ logLevel: "info"
 ##
 maxProcs: ""
 ## @param removeMemberOnContainerTermination Use a PreStop hook to remove the etcd members from the etcd cluster on container termination
-## they the containers are terminated
+## they the containers are terminated. Set to 'false' if appears an error-related member ID wasn't properly stored.
 ## NOTE: Ignored if lifecycleHooks is set or replicaCount=1
 ##
 removeMemberOnContainerTermination: true
@@ -381,6 +384,9 @@ extraVolumes: []
 ## @param extraVolumeMounts [array] Optionally specify extra list of additional volumeMounts for etcd container(s)
 ##
 extraVolumeMounts: []
+## @param extraVolumeClaimTemplates [array] Optionally specify extra list of additional volumeClaimTemplates for etcd container(s)
+##
+extraVolumeClaimTemplates: []
 ## @param initContainers [array] Add additional init containers to the etcd pods
 ## e.g:
 ## initContainers:
@@ -620,8 +626,8 @@ volumePermissions:
   ##
   image:
     registry: docker.io
-    repository: bitnami/bitnami-shell
-    tag: 11-debian-11-r90
+    repository: bitnami/os-shell
+    tag: 11-debian-11-r2
     digest: ""
     ## @param volumePermissions.image.pullPolicy Init container volume-permissions image pull policy
     ##
@@ -816,6 +822,9 @@ disasterRecovery:
     ## @param disasterRecovery.cronjob.snapshotHistoryLimit Number of etcd snapshots to retain, tagged by date
     ##
     snapshotHistoryLimit: 1
+    ## @param disasterRecovery.cronjob.snapshotsDir Directory to store snapshots
+    ##
+    snapshotsDir: "/snapshots"
     ## @param disasterRecovery.cronjob.podAnnotations [object] Pod annotations for cronjob pods
     ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
     ##
@@ -859,6 +868,10 @@ disasterRecovery:
     ## @param disasterRecovery.pvc.storageClassName Storage Class for snapshots volume
     ##
     storageClassName: nfs
+    ## @param disasterRecovery.pvc.subPath Path within the volume from which to mount
+    ## Useful if snapshots should only be stored in a subdirectory of the volume
+    ##
+    subPath: ""
 
 ## @section Service account parameters
 ##

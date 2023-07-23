@@ -1,4 +1,9 @@
-{{- if and .Values.speaker.metrics.enabled .Values.speaker.metrics.serviceMonitor.enabled }}
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if and .Values.speaker.enabled .Values.speaker.metrics.enabled .Values.speaker.metrics.serviceMonitor.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

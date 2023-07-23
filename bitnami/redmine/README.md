@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/redmine
+helm install my-release oci://registry-1.docker.io/bitnamicharts/redmine
 ```
 
 ## Introduction
@@ -22,6 +21,8 @@ This chart bootstraps a [Redmine](https://github.com/bitnami/containers/tree/mai
 It also packages the [Bitnami MariaDB chart](https://github.com/bitnami/charts/tree/main/bitnami/mariadb) and the [PostgreSQL chart](https://github.com/bitnami/charts/tree/main/bitnami/postgresql) which are required for bootstrapping a MariaDB/PostgreSQL deployment for the database requirements of the Redmine application.
 
 Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
+
+Looking to use Redmine in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
 
 ## Prerequisites
 
@@ -35,8 +36,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/redmine
+helm install my-release oci://registry-1.docker.io/bitnamicharts/redmine
 ```
 
 The command deploys Redmine on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -58,7 +58,7 @@ The command removes all the Kubernetes components associated with the chart and 
 This chart includes the option to use a PostgreSQL database for Redmine instead of MariaDB. To use this, set the `databaseType` parameter to `postgresql`:
 
 ```console
-helm install my-release my-repo/redmine --set databaseType=postgresql
+helm install my-release oci://registry-1.docker.io/bitnamicharts/redmine --set databaseType=postgresql
 ```
 
 ## Parameters
@@ -88,33 +88,33 @@ helm install my-release my-repo/redmine --set databaseType=postgresql
 
 ### Redmine Configuration parameters
 
-| Name                    | Description                                                                                             | Value                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- | -------------------- |
-| `image.registry`        | Redmine image registry                                                                                  | `docker.io`          |
-| `image.repository`      | Redmine image repository                                                                                | `bitnami/redmine`    |
-| `image.tag`             | Redmine image tag (immutable tags are recommended)                                                      | `5.0.5-debian-11-r4` |
-| `image.digest`          | Redmine image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                 |
-| `image.pullPolicy`      | Redmine image pull policy                                                                               | `IfNotPresent`       |
-| `image.pullSecrets`     | Redmine image pull secrets                                                                              | `[]`                 |
-| `image.debug`           | Enable image debug mode                                                                                 | `false`              |
-| `redmineUsername`       | Redmine username                                                                                        | `user`               |
-| `redminePassword`       | Redmine user password                                                                                   | `""`                 |
-| `redmineEmail`          | Redmine user email                                                                                      | `user@example.com`   |
-| `redmineLanguage`       | Redmine default data language                                                                           | `en`                 |
-| `allowEmptyPassword`    | Allow the container to be started with blank passwords                                                  | `false`              |
-| `smtpHost`              | SMTP server host                                                                                        | `""`                 |
-| `smtpPort`              | SMTP server port                                                                                        | `""`                 |
-| `smtpUser`              | SMTP username                                                                                           | `""`                 |
-| `smtpPassword`          | SMTP user password                                                                                      | `""`                 |
-| `smtpProtocol`          | SMTP protocol                                                                                           | `""`                 |
-| `existingSecret`        | Name of existing secret containing Redmine credentials                                                  | `""`                 |
-| `smtpExistingSecret`    | The name of an existing secret with SMTP credentials                                                    | `""`                 |
-| `customPostInitScripts` | Custom post-init.d user scripts                                                                         | `{}`                 |
-| `command`               | Override default container command (useful when using custom images)                                    | `[]`                 |
-| `args`                  | Override default container args (useful when using custom images)                                       | `[]`                 |
-| `extraEnvVars`          | Array with extra environment variables to add to the Redmine container                                  | `[]`                 |
-| `extraEnvVarsCM`        | Name of existing ConfigMap containing extra env vars                                                    | `""`                 |
-| `extraEnvVarsSecret`    | Name of existing Secret containing extra env vars                                                       | `""`                 |
+| Name                    | Description                                                                                             | Value                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | --------------------- |
+| `image.registry`        | Redmine image registry                                                                                  | `docker.io`           |
+| `image.repository`      | Redmine image repository                                                                                | `bitnami/redmine`     |
+| `image.tag`             | Redmine image tag (immutable tags are recommended)                                                      | `5.0.5-debian-11-r43` |
+| `image.digest`          | Redmine image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
+| `image.pullPolicy`      | Redmine image pull policy                                                                               | `IfNotPresent`        |
+| `image.pullSecrets`     | Redmine image pull secrets                                                                              | `[]`                  |
+| `image.debug`           | Enable image debug mode                                                                                 | `false`               |
+| `redmineUsername`       | Redmine username                                                                                        | `user`                |
+| `redminePassword`       | Redmine user password                                                                                   | `""`                  |
+| `redmineEmail`          | Redmine user email                                                                                      | `user@example.com`    |
+| `redmineLanguage`       | Redmine default data language                                                                           | `en`                  |
+| `allowEmptyPassword`    | Allow the container to be started with blank passwords                                                  | `false`               |
+| `smtpHost`              | SMTP server host                                                                                        | `""`                  |
+| `smtpPort`              | SMTP server port                                                                                        | `""`                  |
+| `smtpUser`              | SMTP username                                                                                           | `""`                  |
+| `smtpPassword`          | SMTP user password                                                                                      | `""`                  |
+| `smtpProtocol`          | SMTP protocol                                                                                           | `""`                  |
+| `existingSecret`        | Name of existing secret containing Redmine credentials                                                  | `""`                  |
+| `smtpExistingSecret`    | The name of an existing secret with SMTP credentials                                                    | `""`                  |
+| `customPostInitScripts` | Custom post-init.d user scripts                                                                         | `{}`                  |
+| `command`               | Override default container command (useful when using custom images)                                    | `[]`                  |
+| `args`                  | Override default container args (useful when using custom images)                                       | `[]`                  |
+| `extraEnvVars`          | Array with extra environment variables to add to the Redmine container                                  | `[]`                  |
+| `extraEnvVarsCM`        | Name of existing ConfigMap containing extra env vars                                                    | `""`                  |
+| `extraEnvVarsSecret`    | Name of existing Secret containing extra env vars                                                       | `""`                  |
 
 ### Redmine deployment parameters
 
@@ -337,8 +337,8 @@ helm install my-release my-repo/redmine --set databaseType=postgresql
 | `certificates.customCertificate.chainSecret.key`     | Key of the certificate chain file inside the secret                                                     | `""`                                     |
 | `certificates.customCA`                              | Defines a list of secrets to import into the container trust store                                      | `[]`                                     |
 | `certificates.image.registry`                        | Redmine image registry                                                                                  | `docker.io`                              |
-| `certificates.image.repository`                      | Redmine image repository                                                                                | `bitnami/bitnami-shell`                  |
-| `certificates.image.tag`                             | Redmine image tag (immutable tags are recommended)                                                      | `11-debian-11-r98`                       |
+| `certificates.image.repository`                      | Redmine image repository                                                                                | `bitnami/os-shell`                       |
+| `certificates.image.tag`                             | Redmine image tag (immutable tags are recommended)                                                      | `11-debian-11-r11`                       |
 | `certificates.image.digest`                          | Redmine image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                                     |
 | `certificates.image.pullPolicy`                      | Redmine image pull policy                                                                               | `IfNotPresent`                           |
 | `certificates.image.pullSecrets`                     | Redmine image pull secrets                                                                              | `[]`                                     |
@@ -368,7 +368,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 ```console
 helm install my-release \
   --set redmineUsername=admin,redminePassword=password,mariadb.mariadb.auth.rootPassword=secretpassword \
-    my-repo/redmine
+    oci://registry-1.docker.io/bitnamicharts/redmine
 ```
 
 The above command sets the Redmine administrator account username and password to `admin` and `password` respectively. Additionally, it sets the MariaDB `root` user password to `secretpassword`.
@@ -378,7 +378,7 @@ The above command sets the Redmine administrator account username and password t
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/redmine
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/redmine
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -493,7 +493,7 @@ The following example includes two PVCs, one for Redmine and another for MariaDB
 4. Install the chart
 
 ```console
-helm install test --set persistence.existingClaim=PVC_REDMINE,mariadb.persistence.existingClaim=PVC_MARIADB my-repo/redmine
+helm install test --set persistence.existingClaim=PVC_REDMINE,mariadb.persistence.existingClaim=PVC_MARIADB oci://registry-1.docker.io/bitnamicharts/redmine
 ```
 
 ## Certificates
@@ -556,6 +556,10 @@ Find more information about how to deal with common errors related to Bitnami's 
 
 ## Upgrading
 
+### To 22.0.0
+
+This major release bumps the MariaDB version to 10.11. Follow the [upstream instructions](https://mariadb.com/kb/en/upgrading-from-mariadb-10-6-to-mariadb-10-11/) for upgrading from MariaDB 10.6 to 10.11. No major issues are expected during the upgrade.
+
 ### To 21.0.0
 
 This major updates the PostgreSQL subchart to its newest major, 12.0.0. [Here](https://github.com/bitnami/charts/tree/master/bitnami/postgresql#to-1200) you can find more information about the changes introduced in that version.
@@ -564,17 +568,9 @@ This major updates the PostgreSQL subchart to its newest major, 12.0.0. [Here](h
 
 Refer to the [chart documentation for more information about how to upgrade from previous releases](https://docs.bitnami.com/kubernetes/apps/redmine/administration/upgrade/).
 
-## Community supported solution
-
-Please, note this Helm chart is a community-supported solution. This means that the Bitnami team is not actively working on new features/improvements nor providing support through GitHub Issues for this Helm chart. Any new issue will stay open for 20 days to allow the community to contribute, after 15 days without activity the issue will be marked as stale being closed after 5 days.
-
-The Bitnami team will review any PR that is created, feel free to create a PR if you find any issue or want to implement a new feature.
-
-New versions are not going to be affected. Once a new version is released in the upstream project, the Bitnami container image will be updated to use the latest version.
-
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

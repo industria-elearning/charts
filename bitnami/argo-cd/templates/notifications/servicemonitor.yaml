@@ -1,8 +1,13 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if and .Values.notifications.enabled .Values.notifications.metrics.enabled .Values.notifications.metrics.serviceMonitor.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "argo-cd.notifications" . }}
+  name: {{ include "argocd.notifications" . }}
   {{- if .Values.notifications.metrics.serviceMonitor.namespace }}
   namespace: {{ .Values.notifications.metrics.serviceMonitor.namespace | quote }}
   {{- else }}

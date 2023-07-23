@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -95,7 +100,7 @@ data:
             ORD=${BASH_REMATCH[2]}
             export ZOO_SERVER_ID="$((ORD + {{ .Values.minServerId }} ))"
         else
-            echo "Failed to get index from hostname $HOST"
+            echo "Failed to get index from hostname $HOSTNAME"
             exit 1
         fi
     fi

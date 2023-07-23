@@ -1,4 +1,8 @@
-{{- if .Values.config.tlsCerts }}
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -18,4 +22,3 @@ metadata:
   {{- end }}
 data:
   {{- include "common.tplvalues.render" (dict "value" .Values.config.tlsCerts "context" $) | nindent 2 }}
-{{- end }}

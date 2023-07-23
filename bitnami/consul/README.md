@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/consul
+helm install my-release oci://registry-1.docker.io/bitnamicharts/consul
 ```
 
 ## Introduction
@@ -20,6 +19,8 @@ helm install my-release my-repo/consul
 This chart bootstraps a [HashiCorp Consul](https://github.com/bitnami/containers/tree/main/bitnami/consul) deployment on a [Kubernetes](https://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
 
 Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
+
+Looking to use HashiCorp Consul in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
 
 ## Prerequisites
 
@@ -32,8 +33,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/consul
+helm install my-release oci://registry-1.docker.io/bitnamicharts/consul
 ```
 
 These commands deploy HashiCorp Consul on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -85,7 +85,7 @@ helm delete --purge my-release
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------- |
 | `image.registry`                | HashiCorp Consul image registry                                                                                  | `docker.io`           |
 | `image.repository`              | HashiCorp Consul image repository                                                                                | `bitnami/consul`      |
-| `image.tag`                     | HashiCorp Consul image tag (immutable tags are recommended)                                                      | `1.15.1-debian-11-r3` |
+| `image.tag`                     | HashiCorp Consul image tag (immutable tags are recommended)                                                      | `1.16.0-debian-11-r5` |
 | `image.digest`                  | HashiCorp Consul image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
 | `image.pullPolicy`              | HashiCorp Consul image pull policy                                                                               | `IfNotPresent`        |
 | `image.pullSecrets`             | HashiCorp Consul image pull secrets                                                                              | `[]`                  |
@@ -215,17 +215,17 @@ helm delete --purge my-release
 
 ### Volume Permissions parameters
 
-| Name                                   | Description                                                                                                   | Value                   |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `volumePermissions.enabled`            | Enable init container that changes the owner and group of the persistent volume                               | `false`                 |
-| `volumePermissions.image.registry`     | Bitnami Shell image registry                                                                                  | `docker.io`             |
-| `volumePermissions.image.repository`   | Bitnami Shell image repository                                                                                | `bitnami/bitnami-shell` |
-| `volumePermissions.image.tag`          | Bitnami Shell image tag (immutable tags are recommended)                                                      | `11-debian-11-r97`      |
-| `volumePermissions.image.digest`       | Bitnami Shell image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                    |
-| `volumePermissions.image.pullPolicy`   | Bitnami Shell image pull policy                                                                               | `IfNotPresent`          |
-| `volumePermissions.image.pullSecrets`  | Bitnami Shell image pull secrets                                                                              | `[]`                    |
-| `volumePermissions.resources.limits`   | The resources limits for the container                                                                        | `{}`                    |
-| `volumePermissions.resources.requests` | The requested resources for the container                                                                     | `{}`                    |
+| Name                                   | Description                                                                                                        | Value              |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `volumePermissions.enabled`            | Enable init container that changes the owner and group of the persistent volume                                    | `false`            |
+| `volumePermissions.image.registry`     | OS Shell + Utility image registry                                                                                  | `docker.io`        |
+| `volumePermissions.image.repository`   | OS Shell + Utility image repository                                                                                | `bitnami/os-shell` |
+| `volumePermissions.image.tag`          | OS Shell + Utility image tag (immutable tags are recommended)                                                      | `11-debian-11-r2`  |
+| `volumePermissions.image.digest`       | OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`               |
+| `volumePermissions.image.pullPolicy`   | OS Shell + Utility image pull policy                                                                               | `IfNotPresent`     |
+| `volumePermissions.image.pullSecrets`  | OS Shell + Utility image pull secrets                                                                              | `[]`               |
+| `volumePermissions.resources.limits`   | The resources limits for the container                                                                             | `{}`               |
+| `volumePermissions.resources.requests` | The requested resources for the container                                                                          | `{}`               |
 
 ### Metrics parameters
 
@@ -234,7 +234,7 @@ helm delete --purge my-release
 | `metrics.enabled`                               | Start a side-car prometheus exporter                                                                                                 | `false`                   |
 | `metrics.image.registry`                        | HashiCorp Consul Prometheus Exporter image registry                                                                                  | `docker.io`               |
 | `metrics.image.repository`                      | HashiCorp Consul Prometheus Exporter image repository                                                                                | `bitnami/consul-exporter` |
-| `metrics.image.tag`                             | HashiCorp Consul Prometheus Exporter image tag (immutable tags are recommended)                                                      | `0.9.0-debian-11-r36`     |
+| `metrics.image.tag`                             | HashiCorp Consul Prometheus Exporter image tag (immutable tags are recommended)                                                      | `0.9.0-debian-11-r75`     |
 | `metrics.image.digest`                          | HashiCorp Consul Prometheus Exporter image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                      |
 | `metrics.image.pullPolicy`                      | HashiCorp Consul Prometheus Exporter image pull policy                                                                               | `IfNotPresent`            |
 | `metrics.image.pullSecrets`                     | HashiCorp Consul Prometheus Exporter image pull secrets                                                                              | `[]`                      |
@@ -261,7 +261,7 @@ helm delete --purge my-release
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
 ```console
-helm install my-release --set domain=consul-domain,gossipKey=secretkey my-repo/consul
+helm install my-release --set domain=consul-domain,gossipKey=secretkey oci://registry-1.docker.io/bitnamicharts/consul
 ```
 
 The above command sets the HashiCorp Consul domain to `consul-domain` and sets the gossip key to `secretkey`.
@@ -271,7 +271,7 @@ The above command sets the HashiCorp Consul domain to `consul-domain` and sets t
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/consul
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/consul
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -482,7 +482,7 @@ The field `podManagementPolicy` can't be updated in a StatefulSet, so you need t
 
 ```console
 kubectl delete statefulset consul
-helm upgrade <DEPLOYMENT_NAME> my-repo/consul
+helm upgrade <DEPLOYMENT_NAME> oci://registry-1.docker.io/bitnamicharts/consul
 ```
 
 ### To 6.0.0
@@ -494,13 +494,13 @@ This release updates the Bitnami Consul container to `1.6.1-debian-9-r6`, which 
 Consul container was moved to a non-root approach. There shouldn't be any issue when upgrading since the corresponding `securityContext` is enabled by default. Both the container image and the chart can be upgraded by running the command below:
 
 ```console
-helm upgrade my-release my-repo/consul
+helm upgrade my-release oci://registry-1.docker.io/bitnamicharts/consul
 ```
 
 If you use a previous container image (previous to **1.4.0-r16**) disable the `securityContext` by running the command below:
 
 ```console
-helm upgrade my-release my-repo/consul --set securityContext.enabled=false,image.tag=XXX
+helm upgrade my-release oci://registry-1.docker.io/bitnamicharts/consul --set securityContext.enabled=false,image.tag=XXX
 ```
 
 ### To 2.0.0
@@ -514,7 +514,7 @@ kubectl delete statefulset consul --cascade=false
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
@@ -88,7 +93,7 @@ spec:
         {{- end }}
         {{- if .Values.redisWait.enabled }}
         - name: wait-for-redis
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.redis.image "global" .Values.global) }}
+          image: {{ include "argocd.redis.image" . }}
           imagePullPolicy: {{ .Values.redis.image.pullPolicy | quote }}
           {{- with .Values.redisWait.securityContext }}
           securityContext: {{ . | toYaml }}

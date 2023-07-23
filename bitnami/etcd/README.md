@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/etcd
+helm install my-release oci://registry-1.docker.io/bitnamicharts/etcd
 ```
 
 ## Introduction
@@ -20,6 +19,8 @@ helm install my-release my-repo/etcd
 This chart bootstraps a [etcd](https://github.com/bitnami/containers/tree/main/bitnami/etcd) deployment on a [Kubernetes](https://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
 
 Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
+
+Looking to use Etcd in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
 
 ## Prerequisites
 
@@ -32,8 +33,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/etcd
+helm install my-release oci://registry-1.docker.io/bitnamicharts/etcd
 ```
 
 These commands deploy etcd on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -81,7 +81,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------- |
 | `image.registry`                       | etcd image registry                                                                                         | `docker.io`           |
 | `image.repository`                     | etcd image name                                                                                             | `bitnami/etcd`        |
-| `image.tag`                            | etcd image tag                                                                                              | `3.5.7-debian-11-r14` |
+| `image.tag`                            | etcd image tag                                                                                              | `3.5.9-debian-11-r24` |
 | `image.digest`                         | etcd image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag        | `""`                  |
 | `image.pullPolicy`                     | etcd image pull policy                                                                                      | `IfNotPresent`        |
 | `image.pullSecrets`                    | etcd image pull secrets                                                                                     | `[]`                  |
@@ -167,6 +167,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `customStartupProbe`                                | Override default startup probe                                                            | `{}`            |
 | `extraVolumes`                                      | Optionally specify extra list of additional volumes for etcd pods                         | `[]`            |
 | `extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for etcd container(s)            | `[]`            |
+| `extraVolumeClaimTemplates`                         | Optionally specify extra list of additional volumeClaimTemplates for etcd container(s)    | `[]`            |
 | `initContainers`                                    | Add additional init containers to the etcd pods                                           | `[]`            |
 | `sidecars`                                          | Add additional sidecar containers to the etcd pods                                        | `[]`            |
 | `podAnnotations`                                    | Annotations for etcd pods                                                                 | `{}`            |
@@ -226,17 +227,17 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Volume Permissions parameters
 
-| Name                                   | Description                                                                                                                       | Value                   |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `volumePermissions.enabled`            | Enable init container that changes the owner and group of the persistent volume(s) mountpoint to `runAsUser:fsGroup`              | `false`                 |
-| `volumePermissions.image.registry`     | Init container volume-permissions image registry                                                                                  | `docker.io`             |
-| `volumePermissions.image.repository`   | Init container volume-permissions image name                                                                                      | `bitnami/bitnami-shell` |
-| `volumePermissions.image.tag`          | Init container volume-permissions image tag                                                                                       | `11-debian-11-r90`      |
-| `volumePermissions.image.digest`       | Init container volume-permissions image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                    |
-| `volumePermissions.image.pullPolicy`   | Init container volume-permissions image pull policy                                                                               | `IfNotPresent`          |
-| `volumePermissions.image.pullSecrets`  | Specify docker-registry secret names as an array                                                                                  | `[]`                    |
-| `volumePermissions.resources.limits`   | Init container volume-permissions resource  limits                                                                                | `{}`                    |
-| `volumePermissions.resources.requests` | Init container volume-permissions resource  requests                                                                              | `{}`                    |
+| Name                                   | Description                                                                                                                       | Value              |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `volumePermissions.enabled`            | Enable init container that changes the owner and group of the persistent volume(s) mountpoint to `runAsUser:fsGroup`              | `false`            |
+| `volumePermissions.image.registry`     | Init container volume-permissions image registry                                                                                  | `docker.io`        |
+| `volumePermissions.image.repository`   | Init container volume-permissions image name                                                                                      | `bitnami/os-shell` |
+| `volumePermissions.image.tag`          | Init container volume-permissions image tag                                                                                       | `11-debian-11-r2`  |
+| `volumePermissions.image.digest`       | Init container volume-permissions image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`               |
+| `volumePermissions.image.pullPolicy`   | Init container volume-permissions image pull policy                                                                               | `IfNotPresent`     |
+| `volumePermissions.image.pullSecrets`  | Specify docker-registry secret names as an array                                                                                  | `[]`               |
+| `volumePermissions.resources.limits`   | Init container volume-permissions resource  limits                                                                                | `{}`               |
+| `volumePermissions.resources.requests` | Init container volume-permissions resource  requests                                                                              | `{}`               |
 
 ### Network Policy parameters
 
@@ -279,6 +280,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `disasterRecovery.cronjob.schedule`             | Schedule in Cron format to save snapshots                               | `*/30 * * * *` |
 | `disasterRecovery.cronjob.historyLimit`         | Number of successful finished jobs to retain                            | `1`            |
 | `disasterRecovery.cronjob.snapshotHistoryLimit` | Number of etcd snapshots to retain, tagged by date                      | `1`            |
+| `disasterRecovery.cronjob.snapshotsDir`         | Directory to store snapshots                                            | `/snapshots`   |
 | `disasterRecovery.cronjob.podAnnotations`       | Pod annotations for cronjob pods                                        | `{}`           |
 | `disasterRecovery.cronjob.resources.limits`     | Cronjob container resource limits                                       | `{}`           |
 | `disasterRecovery.cronjob.resources.requests`   | Cronjob container resource requests                                     | `{}`           |
@@ -287,6 +289,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `disasterRecovery.pvc.existingClaim`            | A manually managed Persistent Volume and Claim                          | `""`           |
 | `disasterRecovery.pvc.size`                     | PVC Storage Request                                                     | `2Gi`          |
 | `disasterRecovery.pvc.storageClassName`         | Storage Class for snapshots volume                                      | `nfs`          |
+| `disasterRecovery.pvc.subPath`                  | Path within the volume from which to mount                              | `""`           |
 
 ### Service account parameters
 
@@ -310,7 +313,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 
 ```console
 helm install my-release \
-  --set auth.rbac.rootPassword=secretpassword my-repo/etcd
+  --set auth.rbac.rootPassword=secretpassword oci://registry-1.docker.io/bitnamicharts/etcd
 ```
 
 The above command sets the etcd `root` account password to `secretpassword`.
@@ -320,7 +323,7 @@ The above command sets the etcd `root` account password to `secretpassword`.
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/etcd
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/etcd
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -440,6 +443,29 @@ Find more information about how to deal with common errors related to Bitnami's 
 
 ## Upgrading
 
+### To 9.0.0
+
+This version adds a new label `app.kubernetes.io/component=etcd` to the StatefulSet and pods. Due to this change, the StatefulSet will be replaced (as it's not possible to add additional `spec.selector.matchLabels` to an existing StatefulSet) and the pods will be recreated. To upgrade to this version from a previous version, you need to run the following steps:
+
+1. Add new label to your pods
+
+    ```console
+    kubectl label pod my-release-0 app.kubernetes.io/component=etcd
+    # Repeat for all etcd pods, based on configured .replicaCount (excluding the etcd snappshoter pod, if .disasterRecovery.enabled is set to true)
+    ````
+
+2. Remove the StatefulSet keeping the pods:
+
+    ```console
+    kubectl delete statefulset my-release --cascade=orphan
+    ```
+
+3. Upgrade your cluster:
+
+    ```console
+    helm upgrade my-release oci://registry-1.docker.io/bitnamicharts/etcd --set auth.rbac.rootPassword=$ETCD_ROOT_PASSWORD
+    ```
+
 ### To 8.0.0
 
 This version reverts the change in the previous major bump ([7.0.0](https://github.com/bitnami/charts/tree/main/bitnami/etcd#to-700)). Now the default `etcd` branch is `3.5` again once confirmed by the [etcd developers](https://github.com/etcd-io/etcd/tree/main/CHANGELOG#production-recommendation) that this version is production-ready once solved the data corruption issue.
@@ -466,7 +492,7 @@ This version introduces several features and performance improvements:
 - New parameters/features were added:
   - `extraDeploy` to deploy any extra desired object.
   - `initContainers` and `sidecars` to define custom init containers and sidecars.
-  - `extraVolumes` and `extraVolumeMounts` to define custom volumes and mount points.
+  - `extraVolumes`, `extraVolumeMounts` and `extraVolumeClaimTemplates` to define custom volumes, mount points and volume claim templates.
   - Probes can be now customized, and support to startup probes is added.
   - LifecycleHooks can be customized using `lifecycleHooks` parameter.
   - The default command/args can be customized using `command` and `args` parameters.
@@ -502,7 +528,7 @@ To upgrade from previous charts versions, create a snapshot of the keyspace and 
 You can use the command below to upgrade your chart by starting a new cluster using an existing snapshot, available in an existing PVC, to initialize the members:
 
 ```console
-helm install new-release my-repo/etcd \
+helm install new-release oci://registry-1.docker.io/bitnamicharts/etcd \
   --set statefulset.replicaCount=3 \
   --set persistence.enabled=true \
   --set persistence.size=8Gi \
@@ -522,7 +548,7 @@ kubectl delete statefulset etcd --cascade=false
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if eq .Values.exposureType "ingress" }}
 {{- if eq .Values.ingress.core.controller "gce" }}
   {{- $_ := set . "portal_path" "/*" -}}
@@ -61,11 +66,6 @@ spec:
           {{- if .Values.ingress.core.extraPaths }}
           {{- toYaml .Values.ingress.core.extraPaths | nindent 10 }}
           {{- end }}
-          - path: {{ .portal_path }}
-            {{- if eq "true" (include "common.ingress.supportsPathType" .) }}
-            pathType: {{ .Values.ingress.core.pathType }}
-            {{- end }}
-            backend: {{- include "common.ingress.backend" (dict "serviceName" (include "harbor.portal" .) "servicePort" (ternary "https" "http" .Values.internalTLS.enabled) "context" $) | nindent 14 }}
           - path: {{ .api_path }}
             {{- if eq "true" (include "common.ingress.supportsPathType" .) }}
             pathType: {{ .Values.ingress.core.pathType }}
@@ -91,6 +91,11 @@ spec:
             pathType: {{ .Values.ingress.core.pathType }}
             {{- end }}
             backend: {{- include "common.ingress.backend" (dict "serviceName" (include "harbor.core" .) "servicePort" (ternary "https" "http" .Values.internalTLS.enabled) "context" $) | nindent 14 }}
+          - path: {{ .portal_path }}
+            {{- if eq "true" (include "common.ingress.supportsPathType" .) }}
+            pathType: {{ .Values.ingress.core.pathType }}
+            {{- end }}
+            backend: {{- include "common.ingress.backend" (dict "serviceName" (include "harbor.portal" .) "servicePort" (ternary "https" "http" .Values.internalTLS.enabled) "context" $) | nindent 14 }}
     {{- end }}
     {{- range .Values.ingress.core.extraHosts }}
     - host: {{ include "common.tplvalues.render" ( dict "value" .name "context" $ ) }}

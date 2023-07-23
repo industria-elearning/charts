@@ -1,3 +1,8 @@
+/*
+ * Copyright VMware, Inc.
+ * SPDX-License-Identifier: APACHE-2.0
+ */
+
 /// <reference types="cypress" />
 import { random, checkErrors } from '../support/utils';
 
@@ -39,7 +44,7 @@ it('should list the built-in node', () => {
   cy.login();
   cy.visit('/computer');
 
-  cy.contains('Manage nodes and clouds');
+  cy.contains('Nodes');
   cy.get('table#computers').within(() => {
     cy.contains('tr', 'Built-In Node');
   });

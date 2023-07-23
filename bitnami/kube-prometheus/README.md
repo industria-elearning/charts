@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/kube-prometheus
+helm install my-release oci://registry-1.docker.io/bitnamicharts/kube-prometheus
 ```
 
 ## Introduction
@@ -31,6 +30,8 @@ Only one instance of the Prometheus Operator component should be running in the 
 
 Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
 
+Looking to use Prometheus Operator in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
+
 ## Prerequisites
 
 - Kubernetes 1.16+
@@ -41,8 +42,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/kube-prometheus
+helm install my-release oci://registry-1.docker.io/bitnamicharts/kube-prometheus
 ```
 
 The command deploys kube-prometheus on the Kubernetes cluster in the default configuration. The [configuration](#configuration-and-installation-details) section lists the parameters that can be configured during installation.
@@ -89,7 +89,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `operator.enabled`                                                                    | Deploy Prometheus Operator to the cluster                                                                              | `true`                        |
 | `operator.image.registry`                                                             | Prometheus Operator image registry                                                                                     | `docker.io`                   |
 | `operator.image.repository`                                                           | Prometheus Operator image repository                                                                                   | `bitnami/prometheus-operator` |
-| `operator.image.tag`                                                                  | Prometheus Operator image tag (immutable tags are recommended)                                                         | `0.63.0-debian-11-r13`        |
+| `operator.image.tag`                                                                  | Prometheus Operator image tag (immutable tags are recommended)                                                         | `0.66.0-debian-11-r10`        |
 | `operator.image.digest`                                                               | Prometheus Operator image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag    | `""`                          |
 | `operator.image.pullPolicy`                                                           | Prometheus Operator image pull policy                                                                                  | `IfNotPresent`                |
 | `operator.image.pullSecrets`                                                          | Specify docker-registry secret names as an array                                                                       | `[]`                          |
@@ -128,17 +128,20 @@ The command removes all the Kubernetes components associated with the chart and 
 | `operator.service.loadBalancerSourceRanges`                                           | Address that are allowed when svc is `LoadBalancer`                                                                    | `[]`                          |
 | `operator.service.externalTrafficPolicy`                                              | Enable client source IP preservation                                                                                   | `Cluster`                     |
 | `operator.service.healthCheckNodePort`                                                | Specifies the health check node port (numeric port number) for the service if `externalTrafficPolicy` is set to Local. | `""`                          |
+| `operator.service.labels`                                                             | Additional labels for Prometheus Operator service                                                                      | `{}`                          |
 | `operator.service.annotations`                                                        | Additional annotations for Prometheus Operator service                                                                 | `{}`                          |
 | `operator.service.extraPorts`                                                         | Extra ports to expose (normally used with the `sidecar` value)                                                         | `[]`                          |
 | `operator.service.sessionAffinity`                                                    | Session Affinity for Kubernetes service, can be "None" or "ClientIP"                                                   | `None`                        |
 | `operator.service.sessionAffinityConfig`                                              | Additional settings for the sessionAffinity                                                                            | `{}`                          |
 | `operator.serviceMonitor.enabled`                                                     | Creates a ServiceMonitor to monitor Prometheus Operator                                                                | `true`                        |
+| `operator.serviceMonitor.jobLabel`                                                    | The name of the label on the target service to use as the job name in prometheus.                                      | `""`                          |
 | `operator.serviceMonitor.interval`                                                    | Scrape interval (use by default, falling back to Prometheus' default)                                                  | `""`                          |
 | `operator.serviceMonitor.metricRelabelings`                                           | Metric relabeling                                                                                                      | `[]`                          |
 | `operator.serviceMonitor.relabelings`                                                 | Relabel configs                                                                                                        | `[]`                          |
 | `operator.serviceMonitor.scrapeTimeout`                                               | Timeout after which the scrape is ended                                                                                | `""`                          |
 | `operator.serviceMonitor.labels`                                                      | Extra labels for the ServiceMonitor                                                                                    | `{}`                          |
 | `operator.serviceMonitor.annotations`                                                 | Extra annotations for the ServiceMonitor                                                                               | `{}`                          |
+| `operator.serviceMonitor.extraParameters`                                             | Any extra parameter to be added to the endpoint configured in the ServiceMonitor                                       | `{}`                          |
 | `operator.resources`                                                                  | Configure resource requests and limits                                                                                 | `{}`                          |
 | `operator.podAffinityPreset`                                                          | Pod affinity preset                                                                                                    | `""`                          |
 | `operator.podAntiAffinityPreset`                                                      | Prometheus Operator Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`           | `soft`                        |
@@ -204,7 +207,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `prometheus.enabled`                                                  | Deploy Prometheus to the cluster                                                                                                 | `true`                    |
 | `prometheus.image.registry`                                           | Prometheus image registry                                                                                                        | `docker.io`               |
 | `prometheus.image.repository`                                         | Prometheus image repository                                                                                                      | `bitnami/prometheus`      |
-| `prometheus.image.tag`                                                | Prometheus image tag (immutable tags are recommended)                                                                            | `2.42.0-debian-11-r13`    |
+| `prometheus.image.tag`                                                | Prometheus image tag (immutable tags are recommended)                                                                            | `2.45.0-debian-11-r5`     |
 | `prometheus.image.digest`                                             | Prometheus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                       | `""`                      |
 | `prometheus.image.pullSecrets`                                        | Specify docker-registry secret names as an array                                                                                 | `[]`                      |
 | `prometheus.serviceAccount.create`                                    | Specify whether to create a ServiceAccount for Prometheus                                                                        | `true`                    |
@@ -230,10 +233,12 @@ The command removes all the Kubernetes components associated with the chart and 
 | `prometheus.service.loadBalancerSourceRanges`                         | Address that are allowed when service is `LoadBalancer`                                                                          | `[]`                      |
 | `prometheus.service.externalTrafficPolicy`                            | Enable client source IP preservation                                                                                             | `Cluster`                 |
 | `prometheus.service.healthCheckNodePort`                              | Specifies the health check node port                                                                                             | `""`                      |
+| `prometheus.service.labels`                                           | Additional labels for Prometheus service  (this value is evaluated as a template)                                                | `{}`                      |
 | `prometheus.service.annotations`                                      | Additional annotations for Prometheus service  (this value is evaluated as a template)                                           | `{}`                      |
 | `prometheus.service.sessionAffinity`                                  | Session Affinity for Kubernetes service, can be "None" or "ClientIP"                                                             | `None`                    |
 | `prometheus.service.sessionAffinityConfig`                            | Additional settings for the sessionAffinity                                                                                      | `{}`                      |
 | `prometheus.serviceMonitor.enabled`                                   | Creates a ServiceMonitor to monitor Prometheus itself                                                                            | `true`                    |
+| `prometheus.serviceMonitor.jobLabel`                                  | The name of the label on the target service to use as the job name in prometheus.                                                | `""`                      |
 | `prometheus.serviceMonitor.interval`                                  | Scrape interval (use by default, falling back to Prometheus' default)                                                            | `""`                      |
 | `prometheus.serviceMonitor.metricRelabelings`                         | Metric relabeling                                                                                                                | `[]`                      |
 | `prometheus.serviceMonitor.relabelings`                               | Relabel configs                                                                                                                  | `[]`                      |
@@ -260,9 +265,11 @@ The command removes all the Kubernetes components associated with the chart and 
 | `prometheus.nodeAffinityPreset.values`                                | Prometheus Node label values to match. Ignored if `affinity` is set.                                                             | `[]`                      |
 | `prometheus.affinity`                                                 | Prometheus Affinity for pod assignment                                                                                           | `{}`                      |
 | `prometheus.nodeSelector`                                             | Prometheus Node labels for pod assignment                                                                                        | `{}`                      |
+| `prometheus.topologySpreadConstraints`                                | Prometheus Topology Spread Constraints for pod assignment                                                                        | `[]`                      |
 | `prometheus.tolerations`                                              | Prometheus Tolerations for pod assignment                                                                                        | `[]`                      |
 | `prometheus.scrapeInterval`                                           | Interval between consecutive scrapes                                                                                             | `""`                      |
 | `prometheus.evaluationInterval`                                       | Interval between consecutive evaluations                                                                                         | `""`                      |
+| `prometheus.scrapeTimeout`                                            | Timeout after which the global scrape is ended                                                                                   | `""`                      |
 | `prometheus.listenLocal`                                              | ListenLocal makes the Prometheus server listen on loopback                                                                       | `false`                   |
 | `prometheus.livenessProbe.enabled`                                    | Turn on and off liveness probe                                                                                                   | `true`                    |
 | `prometheus.livenessProbe.path`                                       | Path of the HTTP service for checking the healthy state                                                                          | `/-/healthy`              |
@@ -305,6 +312,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `prometheus.podMonitorNamespaceSelector`                              | Namespaces to be selected for PodMonitor discovery                                                                               | `{}`                      |
 | `prometheus.probeSelector`                                            | Probes to be selected for target discovery.                                                                                      | `{}`                      |
 | `prometheus.probeNamespaceSelector`                                   | Namespaces to be selected for Probe discovery                                                                                    | `{}`                      |
+| `prometheus.scrapeConfigSelector`                                     | ScrapeConfig to be selected for target discovery.                                                                                | `{}`                      |
+| `prometheus.scrapeConfigNamespaceSelector`                            | Namespaces to be selected for ScrapeConfig discovery                                                                             | `{}`                      |
 | `prometheus.retention`                                                | Metrics retention days                                                                                                           | `10d`                     |
 | `prometheus.retentionSize`                                            | Maximum size of metrics                                                                                                          | `""`                      |
 | `prometheus.disableCompaction`                                        | Disable the compaction of the Prometheus TSDB                                                                                    | `false`                   |
@@ -342,10 +351,13 @@ The command removes all the Kubernetes components associated with the chart and 
 | `prometheus.additionalAlertRelabelConfigsExternal.enabled`            | Enable additional Prometheus alert relabel configs that are managed externally to this chart                                     | `false`                   |
 | `prometheus.additionalAlertRelabelConfigsExternal.name`               | Name of the secret that Prometheus should use for the additional Prometheus alert relabel configuration                          | `""`                      |
 | `prometheus.additionalAlertRelabelConfigsExternal.key`                | Name of the key inside the secret to be used for the additional Prometheus alert relabel configuration                           | `""`                      |
+| `prometheus.additionalAlertManagerExternal.enabled`                   | Enable additional Prometheus AlertManager configs that are managed externally to this chart                                      | `false`                   |
+| `prometheus.additionalAlertManagerExternal.name`                      | Name of the secret that Prometheus should use for the additional Prometheus AlertManager configuration                           | `""`                      |
+| `prometheus.additionalAlertManagerExternal.key`                       | Name of the key inside the secret to be used for the additional Prometheus AlertManager configuration                            | `""`                      |
 | `prometheus.thanos.create`                                            | Create a Thanos sidecar container                                                                                                | `false`                   |
 | `prometheus.thanos.image.registry`                                    | Thanos image registry                                                                                                            | `docker.io`               |
 | `prometheus.thanos.image.repository`                                  | Thanos image name                                                                                                                | `bitnami/thanos`          |
-| `prometheus.thanos.image.tag`                                         | Thanos image tag                                                                                                                 | `0.30.2-scratch-r6`       |
+| `prometheus.thanos.image.tag`                                         | Thanos image tag                                                                                                                 | `0.31.0-scratch-r9`       |
 | `prometheus.thanos.image.digest`                                      | Thanos image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                           | `""`                      |
 | `prometheus.thanos.image.pullPolicy`                                  | Thanos image pull policy                                                                                                         | `IfNotPresent`            |
 | `prometheus.thanos.image.pullSecrets`                                 | Specify docker-registry secret names as an array                                                                                 | `[]`                      |
@@ -356,7 +368,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `prometheus.thanos.containerSecurityContext.capabilities.drop`        | Linux Kernel capabilities which should be dropped                                                                                | `[]`                      |
 | `prometheus.thanos.prometheusUrl`                                     | Override default prometheus url `http://localhost:9090`                                                                          | `""`                      |
 | `prometheus.thanos.extraArgs`                                         | Additional arguments passed to the thanos sidecar container                                                                      | `[]`                      |
-| `prometheus.thanos.objectStorageConfig`                               | Support mounting a Secret for the objectStorageConfig of the sideCar container.                                                  | `{}`                      |
+| `prometheus.thanos.objectStorageConfig.secretName`                    | Support mounting a Secret for the objectStorageConfig of the sideCar container.                                                  | `""`                      |
+| `prometheus.thanos.objectStorageConfig.secretKey`                     | Secret key with the configuration file.                                                                                          | `thanos.yaml`             |
 | `prometheus.thanos.extraVolumeMounts`                                 | Additional volumeMounts from `prometheus.volumes` for thanos sidecar container                                                   | `[]`                      |
 | `prometheus.thanos.resources.limits`                                  | The resources limits for the Thanos sidecar container                                                                            | `{}`                      |
 | `prometheus.thanos.resources.requests`                                | The resources requests for the Thanos sidecar container                                                                          | `{}`                      |
@@ -380,7 +393,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `prometheus.thanos.service.nodePorts.grpc`                            | Specify the nodePort value for the LoadBalancer and NodePort service types.                                                      | `""`                      |
 | `prometheus.thanos.service.loadBalancerIP`                            | `loadBalancerIP` if service type is `LoadBalancer`                                                                               | `""`                      |
 | `prometheus.thanos.service.loadBalancerSourceRanges`                  | Address that are allowed when svc is `LoadBalancer`                                                                              | `[]`                      |
-| `prometheus.thanos.service.annotations`                               | Additional annotations for Prometheus service                                                                                    | `{}`                      |
+| `prometheus.thanos.service.labels`                                    | Additional labels for Thanos service                                                                                             | `{}`                      |
+| `prometheus.thanos.service.annotations`                               | Additional annotations for Thanos service                                                                                        | `{}`                      |
 | `prometheus.thanos.service.extraPorts`                                | Additional ports to expose from the Thanos sidecar container                                                                     | `[]`                      |
 | `prometheus.thanos.service.externalTrafficPolicy`                     | Prometheus service external traffic policy                                                                                       | `Cluster`                 |
 | `prometheus.thanos.service.sessionAffinity`                           | Session Affinity for Kubernetes service, can be "None" or "ClientIP"                                                             | `None`                    |
@@ -399,6 +413,25 @@ The command removes all the Kubernetes components associated with the chart and 
 | `prometheus.thanos.ingress.extraTls`                                  | TLS configuration for additional hostname(s) to be covered with this ingress record                                              | `[]`                      |
 | `prometheus.thanos.ingress.secrets`                                   | Custom TLS certificates as secrets                                                                                               | `[]`                      |
 | `prometheus.thanos.ingress.extraRules`                                | The list of additional rules to be added to this ingress record. Evaluated as a template                                         | `[]`                      |
+| `prometheus.configReloader.service.enabled`                           | Enable config-reloader sidecar service                                                                                           | `false`                   |
+| `prometheus.configReloader.service.type`                              | Kubernetes service type                                                                                                          | `ClusterIP`               |
+| `prometheus.configReloader.service.ports.http`                        | config-reloader sidecar container service port                                                                                   | `8080`                    |
+| `prometheus.configReloader.service.clusterIP`                         | Specific cluster IP when service type is cluster IP. Use `None` to create headless service by default.                           | `None`                    |
+| `prometheus.configReloader.service.nodePorts.http`                    | Specify the nodePort value for the LoadBalancer and NodePort service types.                                                      | `""`                      |
+| `prometheus.configReloader.service.loadBalancerIP`                    | `loadBalancerIP` if service type is `LoadBalancer`                                                                               | `""`                      |
+| `prometheus.configReloader.service.loadBalancerSourceRanges`          | Address that are allowed when svc is `LoadBalancer`                                                                              | `[]`                      |
+| `prometheus.configReloader.service.labels`                            | Additional labels for Prometheus service                                                                                         | `{}`                      |
+| `prometheus.configReloader.service.annotations`                       | Additional annotations for Prometheus service                                                                                    | `{}`                      |
+| `prometheus.configReloader.service.extraPorts`                        | Additional ports to expose from the config-reloader sidecar container                                                            | `[]`                      |
+| `prometheus.configReloader.service.externalTrafficPolicy`             | Prometheus service external traffic policy                                                                                       | `Cluster`                 |
+| `prometheus.configReloader.service.sessionAffinity`                   | Session Affinity for Kubernetes service, can be "None" or "ClientIP"                                                             | `None`                    |
+| `prometheus.configReloader.service.sessionAffinityConfig`             | Additional settings for the sessionAffinity                                                                                      | `{}`                      |
+| `prometheus.configReloader.serviceMonitor.enabled`                    | Creates a ServiceMonitor to monitor Prometheus config-reloader sidecar                                                           | `false`                   |
+| `prometheus.configReloader.serviceMonitor.interval`                   | Scrape interval (use by default, falling back to Prometheus' default)                                                            | `""`                      |
+| `prometheus.configReloader.serviceMonitor.path`                       | HTTP path to scrape for metrics                                                                                                  | `/metrics`                |
+| `prometheus.configReloader.serviceMonitor.jobLabel`                   | The name of the label on the target service to use as the job name in prometheus.                                                | `""`                      |
+| `prometheus.configReloader.serviceMonitor.metricRelabelings`          | Metric relabeling                                                                                                                | `[]`                      |
+| `prometheus.configReloader.serviceMonitor.relabelings`                | Relabel configs                                                                                                                  | `[]`                      |
 | `prometheus.portName`                                                 | Port name used for the pods and governing service. This defaults to web                                                          | `web`                     |
 
 ### Alertmanager Parameters
@@ -408,7 +441,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `alertmanager.enabled`                                           | Deploy Alertmanager to the cluster                                                                                                                                                                                                                                                                         | `true`                   |
 | `alertmanager.image.registry`                                    | Prometheus image registry                                                                                                                                                                                                                                                                                  | `docker.io`              |
 | `alertmanager.image.repository`                                  | Prometheus image repository                                                                                                                                                                                                                                                                                | `bitnami/alertmanager`   |
-| `alertmanager.image.tag`                                         | Prometheus image tag (immutable tags are recommended)                                                                                                                                                                                                                                                      | `0.25.0-debian-11-r30`   |
+| `alertmanager.image.tag`                                         | Prometheus image tag (immutable tags are recommended)                                                                                                                                                                                                                                                      | `0.25.0-debian-11-r68`   |
 | `alertmanager.image.digest`                                      | Prometheus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                                                                                                                                                                                                 | `""`                     |
 | `alertmanager.image.pullSecrets`                                 | Specify docker-registry secret names as an array                                                                                                                                                                                                                                                           | `[]`                     |
 | `alertmanager.serviceAccount.create`                             | Specify whether to create a ServiceAccount for Alertmanager                                                                                                                                                                                                                                                | `true`                   |
@@ -448,6 +481,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `alertmanager.serviceMonitor.labels`                             | Extra labels for the ServiceMonitor                                                                                                                                                                                                                                                                        | `{}`                     |
 | `alertmanager.serviceMonitor.annotations`                        | Extra annotations for the ServiceMonitor                                                                                                                                                                                                                                                                   | `{}`                     |
 | `alertmanager.serviceMonitor.honorLabels`                        | honorLabels chooses the metric's labels on collisions with target labels                                                                                                                                                                                                                                   | `false`                  |
+| `alertmanager.serviceMonitor.extraParameters`                    | Any extra parameter to be added to the endpoint configured in the ServiceMonitor                                                                                                                                                                                                                           | `{}`                     |
 | `alertmanager.ingress.enabled`                                   | Enable ingress controller resource                                                                                                                                                                                                                                                                         | `false`                  |
 | `alertmanager.ingress.pathType`                                  | Ingress Path type                                                                                                                                                                                                                                                                                          | `ImplementationSpecific` |
 | `alertmanager.ingress.apiVersion`                                | Override API Version (automatically detected if not set)                                                                                                                                                                                                                                                   | `""`                     |
@@ -511,8 +545,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `alertmanager.additionalPeers`                                   | AdditionalPeers allows injecting a set of additional Alertmanagers to peer with to form a highly available cluster                                                                                                                                                                                         | `[]`                     |
 | `alertmanager.routePrefix`                                       | Prefix used to register routes, overriding externalUrl route                                                                                                                                                                                                                                               | `/`                      |
 | `alertmanager.portName`                                          | Port name used for the pods and governing service. This defaults to web                                                                                                                                                                                                                                    | `web`                    |
-| `alertmanager.configNamespaceSelector`                           | AlertmanagerConfigs to be selected for to merge and configure Alertmanager with. This defaults to {}                                                                                                                                                                                                       | `{}`                     |
-| `alertmanager.configSelector`                                    | Namespaces to be selected for AlertmanagerConfig discovery. If nil, only check own namespace. This defaults to {}                                                                                                                                                                                          | `{}`                     |
+| `alertmanager.configNamespaceSelector`                           | Namespaces to be selected for AlertmanagerConfig discovery. If nil, only check own namespace. This defaults to {}                                                                                                                                                                                          | `{}`                     |
+| `alertmanager.configSelector`                                    | AlertmanagerConfigs to be selected for to merge and configure Alertmanager with. This defaults to {}                                                                                                                                                                                                       | `{}`                     |
 | `alertmanager.configuration`                                     | EXPERIMENTAL: alertmanagerConfiguration specifies the global Alertmanager configuration. If defined, it takes precedence over the `configSecret` field. This field may change in future releases. The specified global alertmanager config will not force add a namespace label in routes and inhibitRules | `{}`                     |
 
 ### Exporters
@@ -527,6 +561,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `kubelet.namespace`                                | Namespace where kubelet service is deployed. Related configuration `operator.kubeletService.namespace` | `kube-system`                |
 | `kubelet.serviceMonitor.https`                     | Enable scraping of the kubelet over HTTPS                                                              | `true`                       |
 | `kubelet.serviceMonitor.interval`                  | Scrape interval (use by default, falling back to Prometheus' default)                                  | `""`                         |
+| `kubelet.serviceMonitor.jobLabel`                  | The name of the label on the target service to use as the job name in prometheus.                      | `k8s-app`                    |
 | `kubelet.serviceMonitor.resource`                  | Enable scraping /metrics/resource from kubelet's service                                               | `false`                      |
 | `kubelet.serviceMonitor.resourcePath`              | From kubernetes 1.18, /metrics/resource/v1alpha1 was renamed to /metrics/resource                      | `/metrics/resource/v1alpha1` |
 | `kubelet.serviceMonitor.resourceRelabelings`       | Metric relabeling                                                                                      | `[]`                         |
@@ -547,7 +582,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `blackboxExporter.image.registry`                              | Blackbox Exporter image registry                                                                                  | `docker.io`                 |
 | `blackboxExporter.image.repository`                            | Blackbox Exporter image repository                                                                                | `bitnami/blackbox-exporter` |
 | `blackboxExporter.image.pullPolicy`                            | Blackbox Exporter image pull policy                                                                               | `IfNotPresent`              |
-| `blackboxExporter.image.tag`                                   | Blackbox Exporter image tag (immutable tags are recommended)                                                      | `0.23.0-debian-11-r36`      |
+| `blackboxExporter.image.tag`                                   | Blackbox Exporter image tag (immutable tags are recommended)                                                      | `0.24.0-debian-11-r19`      |
 | `blackboxExporter.image.digest`                                | Blackbox Exporter image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                        |
 | `blackboxExporter.image.pullSecrets`                           | Specify docker-registry secret names as an array                                                                  | `[]`                        |
 | `blackboxExporter.extraEnvVars`                                | Array with extra environment variables to add to blackboxExporter nodes                                           | `[]`                        |
@@ -630,8 +665,11 @@ The command removes all the Kubernetes components associated with the chart and 
 | `blackboxExporter.service.extraPorts`                     | Extra ports to expose in the Blackbox Exporter service                                                                          | `[]`          |
 | `kubeApiServer.enabled`                                   | Create a ServiceMonitor to scrape kube-apiserver service                                                                        | `true`        |
 | `kubeApiServer.serviceMonitor.interval`                   | Scrape interval. If not set, the Prometheus default scrape interval is used.                                                    | `""`          |
+| `kubeApiServer.serviceMonitor.jobLabel`                   | The name of the label on the target service to use as the job name in prometheus.                                               | `component`   |
 | `kubeApiServer.serviceMonitor.metricRelabelings`          | Metric relabeling                                                                                                               | `[]`          |
 | `kubeApiServer.serviceMonitor.relabelings`                | Relabel configs                                                                                                                 | `[]`          |
+| `kubeApiServer.serviceMonitor.labels`                     | Extra labels for the ServiceMonitor                                                                                             | `{}`          |
+| `kubeApiServer.serviceMonitor.annotations`                | Extra annotations for the ServiceMonitor                                                                                        | `{}`          |
 | `kubeControllerManager.enabled`                           | Create a ServiceMonitor to scrape kube-controller-manager service                                                               | `true`        |
 | `kubeControllerManager.endpoints`                         | If your kube controller manager is not deployed as a pod, specify IPs it can be found on                                        | `[]`          |
 | `kubeControllerManager.namespace`                         | Namespace where kube-controller-manager service is deployed.                                                                    | `kube-system` |
@@ -639,12 +677,16 @@ The command removes all the Kubernetes components associated with the chart and 
 | `kubeControllerManager.service.ports.http`                | Listening port of the kube-controller-manager Service object                                                                    | `10252`       |
 | `kubeControllerManager.service.targetPorts.http`          | Port to target on the kube-controller-manager Pods. This should be the port that kube-controller-manager is exposing metrics on | `10252`       |
 | `kubeControllerManager.service.selector`                  | Optional PODs Label selector for the service                                                                                    | `{}`          |
+| `kubeControllerManager.service.labels`                    | Additional labels for kube-controller-manaer service                                                                            | `{}`          |
 | `kubeControllerManager.serviceMonitor.interval`           | Scrape interval (use by default, falling back to Prometheus' default)                                                           | `""`          |
+| `kubeControllerManager.serviceMonitor.jobLabel`           | The name of the label on the target service to use as the job name in prometheus.                                               | `component`   |
 | `kubeControllerManager.serviceMonitor.https`              | Enable scraping kube-controller-manager over https                                                                              | `false`       |
 | `kubeControllerManager.serviceMonitor.insecureSkipVerify` | Skip TLS certificate validation when scraping                                                                                   | `""`          |
 | `kubeControllerManager.serviceMonitor.serverName`         | Name of the server to use when validating TLS certificate                                                                       | `""`          |
 | `kubeControllerManager.serviceMonitor.metricRelabelings`  | Metric relabeling                                                                                                               | `[]`          |
 | `kubeControllerManager.serviceMonitor.relabelings`        | Relabel configs                                                                                                                 | `[]`          |
+| `kubeControllerManager.serviceMonitor.labels`             | Extra labels for the ServiceMonitor                                                                                             | `{}`          |
+| `kubeControllerManager.serviceMonitor.annotations`        | Extra annotations for the ServiceMonitor                                                                                        | `{}`          |
 | `kubeScheduler.enabled`                                   | Create a ServiceMonitor to scrape kube-scheduler service                                                                        | `true`        |
 | `kubeScheduler.endpoints`                                 | If your kube scheduler is not deployed as a pod, specify IPs it can be found on                                                 | `[]`          |
 | `kubeScheduler.namespace`                                 | Namespace where kube-scheduler service is deployed.                                                                             | `kube-system` |
@@ -652,8 +694,10 @@ The command removes all the Kubernetes components associated with the chart and 
 | `kubeScheduler.service.ports.http`                        | Listening port of the kube scheduler Service object                                                                             | `10251`       |
 | `kubeScheduler.service.targetPorts.http`                  | Port to target on the kube scheduler Pods. This should be the port that kube scheduler is exposing metrics on                   | `10251`       |
 | `kubeScheduler.service.selector`                          | Optional PODs Label selector for the service                                                                                    | `{}`          |
+| `kubeScheduler.service.labels`                            | Additional labels for kube-scheduler service                                                                                    | `{}`          |
 | `kubeScheduler.serviceMonitor.interval`                   | Scrape interval (use by default, falling back to Prometheus' default)                                                           | `""`          |
 | `kubeScheduler.serviceMonitor.https`                      | Enable scraping kube-scheduler over https                                                                                       | `false`       |
+| `kubeScheduler.serviceMonitor.jobLabel`                   | The name of the label on the target service to use as the job name in prometheus.                                               | `component`   |
 | `kubeScheduler.serviceMonitor.insecureSkipVerify`         | Skip TLS certificate validation when scraping                                                                                   | `""`          |
 | `kubeScheduler.serviceMonitor.serverName`                 | Name of the server to use when validating TLS certificate                                                                       | `""`          |
 | `kubeScheduler.serviceMonitor.metricRelabelings`          | Metric relabeling                                                                                                               | `[]`          |
@@ -666,9 +710,13 @@ The command removes all the Kubernetes components associated with the chart and 
 | `coreDns.service.ports.http`                              | Listening port of the coredns Service object                                                                                    | `9153`        |
 | `coreDns.service.targetPorts.http`                        | Port to target on the coredns Pods. This should be the port that coredns is exposing metrics on                                 | `9153`        |
 | `coreDns.service.selector`                                | Optional PODs Label selector for the service                                                                                    | `{}`          |
+| `coreDns.service.labels`                                  | Additional labels for coredns service                                                                                           | `{}`          |
 | `coreDns.serviceMonitor.interval`                         | Scrape interval. If not set, the Prometheus default scrape interval is used.                                                    | `""`          |
+| `coreDns.serviceMonitor.jobLabel`                         | The name of the label on the target service to use as the job name in prometheus.                                               | `k8s-app`     |
 | `coreDns.serviceMonitor.metricRelabelings`                | Metric relabel configs to apply to samples before ingestion.                                                                    | `[]`          |
 | `coreDns.serviceMonitor.relabelings`                      | Relabel configs to apply to samples before ingestion.                                                                           | `[]`          |
+| `coreDns.serviceMonitor.labels`                           | Extra labels for the ServiceMonitor                                                                                             | `{}`          |
+| `coreDns.serviceMonitor.annotations`                      | Extra annotations for the ServiceMonitor                                                                                        | `{}`          |
 | `kubeProxy.enabled`                                       | Create a ServiceMonitor to scrape the kube-proxy Service                                                                        | `true`        |
 | `kubeProxy.endpoints`                                     | If your kube-proxy is not deployed as a pod, specify IPs it can be found on                                                     | `[]`          |
 | `kubeProxy.namespace`                                     | Namespace where kube-proxy service is deployed.                                                                                 | `kube-system` |
@@ -676,8 +724,10 @@ The command removes all the Kubernetes components associated with the chart and 
 | `kubeProxy.service.ports.http`                            | Listening port of the kube-proxy Service object                                                                                 | `10249`       |
 | `kubeProxy.service.targetPorts.http`                      | Port to target on the kube-proxy Pods. This should be the port that kube-proxy is exposing metrics on                           | `10249`       |
 | `kubeProxy.service.selector`                              | Optional PODs Label selector for the service                                                                                    | `{}`          |
+| `kubeProxy.service.labels`                                | Additional labels for kube-proxy service                                                                                        | `{}`          |
 | `kubeProxy.serviceMonitor.https`                          | Enable scraping kube-proxy over https.                                                                                          | `false`       |
 | `kubeProxy.serviceMonitor.interval`                       | Scrape interval (use by default, falling back to Prometheus' default)                                                           | `""`          |
+| `kubeProxy.serviceMonitor.jobLabel`                       | The name of the label on the target service to use as the job name in prometheus.                                               | `k8s-app`     |
 | `kubeProxy.serviceMonitor.metricRelabelings`              | Metric relabeling                                                                                                               | `[]`          |
 | `kubeProxy.serviceMonitor.relabelings`                    | Relabel configs                                                                                                                 | `[]`          |
 | `kubeProxy.serviceMonitor.labels`                         | Extra labels for the ServiceMonitor                                                                                             | `{}`          |
@@ -696,7 +746,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 helm install my-release \
   --set operator.logLevel=debug \
   --set prometheus.replicaCount=5 \
-    my-repo/kube-prometheus
+    oci://registry-1.docker.io/bitnamicharts/kube-prometheus
 ```
 
 The above command sets the Prometheus Operator `logLevel` to `debug`. Additionally it sets the `prometheus.replicaCount` to `5`.
@@ -704,7 +754,7 @@ The above command sets the Prometheus Operator `logLevel` to `debug`. Additional
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/kube-prometheus
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/kube-prometheus
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -749,10 +799,12 @@ As an alternative, use one of the preset configurations for pod affinity, pod an
 
 Find more information about how to deal with common errors related to Bitnami's Helm charts in [this troubleshooting guide](https://docs.bitnami.com/general/how-to/troubleshoot-helm-chart-issues).
 
+While upgrading a chart, please note that there are certain limitations to upgrading CRDs. This limitation requires manual installation of the CRDs. Refer to the following [Helm documentation](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations/).
+
 ## Upgrading
 
 ```console
-helm upgrade my-release my-repo/kube-prometheus
+helm upgrade my-release oci://registry-1.docker.io/bitnamicharts/kube-prometheus
 ```
 
 ### To 8.0.0
@@ -875,7 +927,7 @@ To upgrade from version 2.0.0, previously remove the Thanos sidecar svc to avoid
 
 ```console
 kubectl delete svc my-relase-kube-prometheus-prometheus-thanos
-helm upgrade my-release --set prometheus.thanos.create=true my-repo/kube-prometheus
+helm upgrade my-release --set prometheus.thanos.create=true oci://registry-1.docker.io/bitnamicharts/kube-prometheus
 ```
 
 ### To 2.0.0
@@ -894,7 +946,7 @@ helm upgrade my-release --set prometheus.thanos.create=true my-repo/kube-prometh
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

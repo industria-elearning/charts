@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
@@ -62,7 +67,7 @@ spec:
       {{- if .Values.podSecurityContext.enabled }}
       securityContext: {{- omit .Values.podSecurityContext "enabled" | toYaml | nindent 8 }}
       {{- end }}
-      {{- if or .Values.initContainers .Values.sysctl.enabled (and .Values.volumePermissions.enabled .Values.persistence.enabled) }}
+      {{- if or .Values.initContainers .Values.caCerts.enabled .Values.plugins.install .Values.sysctl.enabled (and .Values.volumePermissions.enabled .Values.persistence.enabled) }}
       initContainers:
         {{- if .Values.plugins.install }}
         - name: {{ printf "%s-install-plugins-initcontainer" (include "common.names.fullname" .) }}

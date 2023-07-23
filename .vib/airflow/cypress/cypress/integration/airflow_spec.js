@@ -1,3 +1,8 @@
+/*
+ * Copyright VMware, Inc.
+ * SPDX-License-Identifier: APACHE-2.0
+ */
+
 /// <reference types="cypress" />
 import { random } from '../support/utils';
 
@@ -22,7 +27,7 @@ it('allows to create a user', () => {
     cy.get('#last_name').type(users.newUser.lastName);
     cy.get('#username').type(`${users.newUser.username}.${random}`);
     cy.get('#email').type(`${users.newUser.username}.${random}@email.com`);
-    cy.get('#s2id_autogen1').type(`${users.newUser.role}{enter}`);
+    cy.get('input[type="search"]').type(`${users.newUser.role}{enter}`);
     cy.get('#password').type(users.newUser.password);
     cy.get('#conf_password').type(users.newUser.password);
     cy.contains('Save').click();

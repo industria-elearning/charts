@@ -1,4 +1,9 @@
 {{/*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{/*
 Return the proper Mastodon image name
 */}}
 {{- define "mastodon.image" -}}
@@ -27,6 +32,22 @@ Return the proper Mastodon web fullname
 {{- end -}}
 
 {{/*
+Return the proper Mastodon tootctlMediaManagement fullname
+*/}}
+{{- define "mastodon.tootctlMediaManagement.fullname" -}}
+{{- printf "%s-%s" (include "common.names.fullname" .) "tootctl-media" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Return the proper Mastodon tootctl media option to include follows
+*/}}
+{{- define "mastodon.tootctlMediaManagement.includeFollows" -}}
+    {{- if .Values.tootctlMediaManagement.includeFollows -}}
+    	{{- print "--include-follows" -}}	
+    {{- end -}}
+{{- end -}}
+
+{{/*
 Return the proper Mastodon web domain
 */}}
 {{- define "mastodon.web.domain" -}}
@@ -52,7 +73,11 @@ Return the proper Mastodon streaming fullname
 Return Mastodon streaming url
 */}}
 {{- define "mastodon.streaming.url" -}}
-{{- printf "ws://%s" (include "mastodon.web.domain" .) | trunc 63 | trimSuffix "-" -}}
+  {{- if .Values.useSecureWebSocket -}}
+    {{- printf "wss://%s" (include "mastodon.web.domain" .) | trunc 63 | trimSuffix "-" -}}
+  {{- else -}}
+    {{- printf "ws://%s" (include "mastodon.web.domain" .) | trunc 63 | trimSuffix "-" -}}
+  {{- end -}}  
 {{- end -}}
 
 {{/*
@@ -157,6 +182,14 @@ Return the S3 protocol
         {{- ternary "https" "http" .Values.minio.tls.enabled  -}}
     {{- else -}}
         {{- print .Values.externalS3.protocol -}}
+    {{- end -}}
+{{- end -}}
+
+{{- define "mastodon.s3.protocol.setting" -}}
+    {{- if .Values.forceHttpsS3Protocol -}}
+        {{- print "https" -}}
+    {{- else -}}
+        {{- print (include "mastodon.s3.protocol" .) -}}
     {{- end -}}
 {{- end -}}
 

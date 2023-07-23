@@ -11,8 +11,7 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/spark
+helm install my-release oci://registry-1.docker.io/bitnamicharts/spark
 ```
 
 ## Introduction
@@ -22,6 +21,8 @@ This chart bootstraps an [Apache Spark](https://github.com/bitnami/containers/tr
 Apache Spark includes APIs for Java, Python, Scala and R.
 
 Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
+
+Looking to use Apache Spark in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
 
 ## Prerequisites
 
@@ -33,8 +34,7 @@ Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/spark
+helm install my-release oci://registry-1.docker.io/bitnamicharts/spark
 ```
 
 These commands deploy Apache Spark on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -86,7 +86,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | ------------------- | ----------------------------------------------------------------------------------------------------- | -------------------- |
 | `image.registry`    | Spark image registry                                                                                  | `docker.io`          |
 | `image.repository`  | Spark image repository                                                                                | `bitnami/spark`      |
-| `image.tag`         | Spark image tag (immutable tags are recommended)                                                      | `3.3.2-debian-11-r9` |
+| `image.tag`         | Spark image tag (immutable tags are recommended)                                                      | `3.4.1-debian-11-r6` |
 | `image.digest`      | Spark image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                 |
 | `image.pullPolicy`  | Spark image pull policy                                                                               | `IfNotPresent`       |
 | `image.pullSecrets` | Specify docker-registry secret names as an array                                                      | `[]`                 |
@@ -137,6 +137,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `master.lifecycleHooks`                                  | for the master container(s) to automate configuration before or after startup                                            | `{}`            |
 | `master.extraVolumes`                                    | Optionally specify extra list of additional volumes for the master pod(s)                                                | `[]`            |
 | `master.extraVolumeMounts`                               | Optionally specify extra list of additional volumeMounts for the master container(s)                                     | `[]`            |
+| `master.extraVolumeClaimTemplates`                       | Optionally specify extra list of volumesClaimTemplates for the master statefulset                                        | `[]`            |
 | `master.resources.limits`                                | The resources limits for the container                                                                                   | `{}`            |
 | `master.resources.requests`                              | The requested resources for the container                                                                                | `{}`            |
 | `master.livenessProbe.enabled`                           | Enable livenessProbe                                                                                                     | `true`          |
@@ -213,6 +214,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `worker.lifecycleHooks`                                  | for the worker container(s) to automate configuration before or after startup                                            | `{}`            |
 | `worker.extraVolumes`                                    | Optionally specify extra list of additional volumes for the worker pod(s)                                                | `[]`            |
 | `worker.extraVolumeMounts`                               | Optionally specify extra list of additional volumeMounts for the master container(s)                                     | `[]`            |
+| `worker.extraVolumeClaimTemplates`                       | Optionally specify extra list of volumesClaimTemplates for the worker statefulset                                        | `[]`            |
 | `worker.resources.limits`                                | The resources limits for the container                                                                                   | `{}`            |
 | `worker.resources.requests`                              | The requested resources for the container                                                                                | `{}`            |
 | `worker.livenessProbe.enabled`                           | Enable livenessProbe                                                                                                     | `true`          |
@@ -329,7 +331,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 
 ```console
 helm install my-release \
-  --set master.webPort=8081 my-repo/spark
+  --set master.webPort=8081 oci://registry-1.docker.io/bitnamicharts/spark
 ```
 
 The above command sets the spark master web port to `8081`.
@@ -337,7 +339,7 @@ The above command sets the spark master web port to `8081`.
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/spark
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/spark
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -466,7 +468,7 @@ This version standardizes the way of defining Ingress rules. When configuring a 
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -1,3 +1,8 @@
+{{/*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{/* vim: set filetype=mustache: */}}
 {{/*
 Expand the name of the chart.
@@ -63,6 +68,11 @@ If release name contains chart name it will be used as a full name.
 {{/* Fullname suffixed with thanos */}}
 {{- define "kube-prometheus.thanos.fullname" -}}
 {{- printf "%s-thanos" (include "kube-prometheus.prometheus.fullname" .) -}}
+{{- end -}}
+
+{{/* Fullname suffixed with config-reloader */}}
+{{- define "kube-prometheus.configReloader.fullname" -}}
+{{- printf "%s-config-reloader" (include "kube-prometheus.prometheus.fullname" .) -}}
 {{- end -}}
 
 {{/*

@@ -1,3 +1,8 @@
+/*
+ * Copyright VMware, Inc.
+ * SPDX-License-Identifier: APACHE-2.0
+ */
+
 /// <reference types="cypress" />
 
 import { random } from '../support/utils';
@@ -5,7 +10,7 @@ import { random } from '../support/utils';
 it('allows creating a post with image', () => {
   cy.login();
   cy.visit('/wp-admin/post-new.php');
-  cy.get('[aria-label="Close dialog"]').click();
+  cy.get('[aria-label="Close"]').click();
   cy.fixture('posts').then((post) => {
     cy.get('[aria-label="Add title"]')
       .clear()

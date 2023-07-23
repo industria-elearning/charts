@@ -11,8 +11,7 @@ Disclaimer: Redis is a registered trademark of Redis Ltd. Any rights therein are
 ## TL;DR
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/redis
+helm install my-release oci://registry-1.docker.io/bitnamicharts/redis
 ```
 
 ## Introduction
@@ -36,6 +35,8 @@ The main features of each chart are the following:
 | Single write point (single master)                     | Multiple write points (multiple masters)                               |
 | ![Redis&reg; Topology](img/redis-topology.png) | ![Redis&reg; Cluster Topology](img/redis-cluster-topology.png) |
 
+Looking to use Redisreg; in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
+
 ## Prerequisites
 
 - Kubernetes 1.19+
@@ -47,8 +48,7 @@ The main features of each chart are the following:
 To install the chart with the release name `my-release`:
 
 ```console
-helm repo add my-repo https://charts.bitnami.com/bitnami
-helm install my-release my-repo/redis
+helm install my-release oci://registry-1.docker.io/bitnamicharts/redis
 ```
 
 The command deploys Redis&reg; on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -78,20 +78,22 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Common parameters
 
-| Name                     | Description                                                                             | Value           |
-| ------------------------ | --------------------------------------------------------------------------------------- | --------------- |
-| `kubeVersion`            | Override Kubernetes version                                                             | `""`            |
-| `nameOverride`           | String to partially override common.names.fullname                                      | `""`            |
-| `fullnameOverride`       | String to fully override common.names.fullname                                          | `""`            |
-| `commonLabels`           | Labels to add to all deployed objects                                                   | `{}`            |
-| `commonAnnotations`      | Annotations to add to all deployed objects                                              | `{}`            |
-| `secretAnnotations`      | Annotations to add to secret                                                            | `{}`            |
-| `clusterDomain`          | Kubernetes cluster domain name                                                          | `cluster.local` |
-| `extraDeploy`            | Array of extra objects to deploy with the release                                       | `[]`            |
-| `useHostnames`           | Use hostnames internally when announcing replication                                    | `true`          |
-| `diagnosticMode.enabled` | Enable diagnostic mode (all probes will be disabled and the command will be overridden) | `false`         |
-| `diagnosticMode.command` | Command to override all containers in the deployment                                    | `["sleep"]`     |
-| `diagnosticMode.args`    | Args to override all containers in the deployment                                       | `["infinity"]`  |
+| Name                      | Description                                                                                                    | Value           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------- |
+| `kubeVersion`             | Override Kubernetes version                                                                                    | `""`            |
+| `nameOverride`            | String to partially override common.names.fullname                                                             | `""`            |
+| `fullnameOverride`        | String to fully override common.names.fullname                                                                 | `""`            |
+| `commonLabels`            | Labels to add to all deployed objects                                                                          | `{}`            |
+| `commonAnnotations`       | Annotations to add to all deployed objects                                                                     | `{}`            |
+| `secretAnnotations`       | Annotations to add to secret                                                                                   | `{}`            |
+| `clusterDomain`           | Kubernetes cluster domain name                                                                                 | `cluster.local` |
+| `extraDeploy`             | Array of extra objects to deploy with the release                                                              | `[]`            |
+| `useHostnames`            | Use hostnames internally when announcing replication. If false, the hostname will be resolved to an IP address | `true`          |
+| `nameResolutionThreshold` | Failure threshold for internal hostnames resolution                                                            | `5`             |
+| `nameResolutionTimeout`   | Timeout seconds between probes for internal hostnames resolution                                               | `5`             |
+| `diagnosticMode.enabled`  | Enable diagnostic mode (all probes will be disabled and the command will be overridden)                        | `false`         |
+| `diagnosticMode.command`  | Command to override all containers in the deployment                                                           | `["sleep"]`     |
+| `diagnosticMode.args`     | Args to override all containers in the deployment                                                              | `["infinity"]`  |
 
 ### Redis&reg; Image parameters
 
@@ -99,7 +101,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | ------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------- |
 | `image.registry`    | Redis&reg; image registry                                                                                  | `docker.io`           |
 | `image.repository`  | Redis&reg; image repository                                                                                | `bitnami/redis`       |
-| `image.tag`         | Redis&reg; image tag (immutable tags are recommended)                                                      | `7.0.10-debian-11-r2` |
+| `image.tag`         | Redis&reg; image tag (immutable tags are recommended)                                                      | `7.0.12-debian-11-r2` |
 | `image.digest`      | Redis&reg; image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
 | `image.pullPolicy`  | Redis&reg; image pull policy                                                                               | `IfNotPresent`        |
 | `image.pullSecrets` | Redis&reg; image pull secrets                                                                              | `[]`                  |
@@ -333,7 +335,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `sentinel.enabled`                            | Use Redis&reg; Sentinel on Redis&reg; pods.                                                                                                 | `false`                  |
 | `sentinel.image.registry`                     | Redis&reg; Sentinel image registry                                                                                                          | `docker.io`              |
 | `sentinel.image.repository`                   | Redis&reg; Sentinel image repository                                                                                                        | `bitnami/redis-sentinel` |
-| `sentinel.image.tag`                          | Redis&reg; Sentinel image tag (immutable tags are recommended)                                                                              | `7.0.10-debian-11-r1`    |
+| `sentinel.image.tag`                          | Redis&reg; Sentinel image tag (immutable tags are recommended)                                                                              | `7.0.12-debian-11-r1`    |
 | `sentinel.image.digest`                       | Redis&reg; Sentinel image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                         | `""`                     |
 | `sentinel.image.pullPolicy`                   | Redis&reg; Sentinel image pull policy                                                                                                       | `IfNotPresent`           |
 | `sentinel.image.pullSecrets`                  | Redis&reg; Sentinel image pull secrets                                                                                                      | `[]`                     |
@@ -366,15 +368,15 @@ The command removes all the Kubernetes components associated with the chart and 
 | `sentinel.startupProbe.successThreshold`      | Success threshold for startupProbe                                                                                                          | `1`                      |
 | `sentinel.livenessProbe.enabled`              | Enable livenessProbe on Redis&reg; Sentinel nodes                                                                                           | `true`                   |
 | `sentinel.livenessProbe.initialDelaySeconds`  | Initial delay seconds for livenessProbe                                                                                                     | `20`                     |
-| `sentinel.livenessProbe.periodSeconds`        | Period seconds for livenessProbe                                                                                                            | `5`                      |
+| `sentinel.livenessProbe.periodSeconds`        | Period seconds for livenessProbe                                                                                                            | `10`                     |
 | `sentinel.livenessProbe.timeoutSeconds`       | Timeout seconds for livenessProbe                                                                                                           | `5`                      |
-| `sentinel.livenessProbe.failureThreshold`     | Failure threshold for livenessProbe                                                                                                         | `5`                      |
+| `sentinel.livenessProbe.failureThreshold`     | Failure threshold for livenessProbe                                                                                                         | `6`                      |
 | `sentinel.livenessProbe.successThreshold`     | Success threshold for livenessProbe                                                                                                         | `1`                      |
 | `sentinel.readinessProbe.enabled`             | Enable readinessProbe on Redis&reg; Sentinel nodes                                                                                          | `true`                   |
 | `sentinel.readinessProbe.initialDelaySeconds` | Initial delay seconds for readinessProbe                                                                                                    | `20`                     |
 | `sentinel.readinessProbe.periodSeconds`       | Period seconds for readinessProbe                                                                                                           | `5`                      |
 | `sentinel.readinessProbe.timeoutSeconds`      | Timeout seconds for readinessProbe                                                                                                          | `1`                      |
-| `sentinel.readinessProbe.failureThreshold`    | Failure threshold for readinessProbe                                                                                                        | `5`                      |
+| `sentinel.readinessProbe.failureThreshold`    | Failure threshold for readinessProbe                                                                                                        | `6`                      |
 | `sentinel.readinessProbe.successThreshold`    | Success threshold for readinessProbe                                                                                                        | `1`                      |
 | `sentinel.customStartupProbe`                 | Custom startupProbe that overrides the default one                                                                                          | `{}`                     |
 | `sentinel.customLivenessProbe`                | Custom livenessProbe that overrides the default one                                                                                         | `{}`                     |
@@ -451,7 +453,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.enabled`                            | Start a sidecar prometheus exporter to expose Redis&reg; metrics                                                    | `false`                  |
 | `metrics.image.registry`                     | Redis&reg; Exporter image registry                                                                                  | `docker.io`              |
 | `metrics.image.repository`                   | Redis&reg; Exporter image repository                                                                                | `bitnami/redis-exporter` |
-| `metrics.image.tag`                          | Redis&reg; Exporter image tag (immutable tags are recommended)                                                      | `1.48.0-debian-11-r6`    |
+| `metrics.image.tag`                          | Redis&reg; Exporter image tag (immutable tags are recommended)                                                      | `1.51.0-debian-11-r11`   |
 | `metrics.image.digest`                       | Redis&reg; Exporter image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                     |
 | `metrics.image.pullPolicy`                   | Redis&reg; Exporter image pull policy                                                                               | `IfNotPresent`           |
 | `metrics.image.pullSecrets`                  | Redis&reg; Exporter image pull secrets                                                                              | `[]`                     |
@@ -495,6 +497,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.service.loadBalancerIP`             | Redis&reg; exporter service Load Balancer IP                                                                        | `""`                     |
 | `metrics.service.loadBalancerSourceRanges`   | Redis&reg; exporter service Load Balancer sources                                                                   | `[]`                     |
 | `metrics.service.annotations`                | Additional custom annotations for Redis&reg; exporter service                                                       | `{}`                     |
+| `metrics.service.clusterIP`                  | Redis&reg; exporter service Cluster IP                                                                              | `""`                     |
 | `metrics.serviceMonitor.enabled`             | Create ServiceMonitor resource(s) for scraping metrics using PrometheusOperator                                     | `false`                  |
 | `metrics.serviceMonitor.namespace`           | The namespace in which the ServiceMonitor will be created                                                           | `""`                     |
 | `metrics.serviceMonitor.interval`            | The interval at which metrics should be scraped                                                                     | `30s`                    |
@@ -504,6 +507,8 @@ The command removes all the Kubernetes components associated with the chart and 
 | `metrics.serviceMonitor.honorLabels`         | Specify honorLabels parameter to add the scrape endpoint                                                            | `false`                  |
 | `metrics.serviceMonitor.additionalLabels`    | Additional labels that can be used so ServiceMonitor resource(s) can be discovered by Prometheus                    | `{}`                     |
 | `metrics.serviceMonitor.podTargetLabels`     | Labels from the Kubernetes pod to be transferred to the created metrics                                             | `[]`                     |
+| `metrics.serviceMonitor.sampleLimit`         | Limit of how many samples should be scraped from every Pod                                                          | `false`                  |
+| `metrics.serviceMonitor.targetLimit`         | Limit of how many targets should be scraped                                                                         | `false`                  |
 | `metrics.prometheusRule.enabled`             | Create a custom prometheusRule Resource for scraping metrics using PrometheusOperator                               | `false`                  |
 | `metrics.prometheusRule.namespace`           | The namespace in which the prometheusRule will be created                                                           | `""`                     |
 | `metrics.prometheusRule.additionalLabels`    | Additional labels for the prometheusRule                                                                            | `{}`                     |
@@ -511,29 +516,29 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Init Container Parameters
 
-| Name                                                   | Description                                                                                                   | Value                   |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `volumePermissions.enabled`                            | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`               | `false`                 |
-| `volumePermissions.image.registry`                     | Bitnami Shell image registry                                                                                  | `docker.io`             |
-| `volumePermissions.image.repository`                   | Bitnami Shell image repository                                                                                | `bitnami/bitnami-shell` |
-| `volumePermissions.image.tag`                          | Bitnami Shell image tag (immutable tags are recommended)                                                      | `11-debian-11-r99`      |
-| `volumePermissions.image.digest`                       | Bitnami Shell image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                    |
-| `volumePermissions.image.pullPolicy`                   | Bitnami Shell image pull policy                                                                               | `IfNotPresent`          |
-| `volumePermissions.image.pullSecrets`                  | Bitnami Shell image pull secrets                                                                              | `[]`                    |
-| `volumePermissions.resources.limits`                   | The resources limits for the init container                                                                   | `{}`                    |
-| `volumePermissions.resources.requests`                 | The requested resources for the init container                                                                | `{}`                    |
-| `volumePermissions.containerSecurityContext.runAsUser` | Set init container's Security Context runAsUser                                                               | `0`                     |
-| `sysctl.enabled`                                       | Enable init container to modify Kernel settings                                                               | `false`                 |
-| `sysctl.image.registry`                                | Bitnami Shell image registry                                                                                  | `docker.io`             |
-| `sysctl.image.repository`                              | Bitnami Shell image repository                                                                                | `bitnami/bitnami-shell` |
-| `sysctl.image.tag`                                     | Bitnami Shell image tag (immutable tags are recommended)                                                      | `11-debian-11-r99`      |
-| `sysctl.image.digest`                                  | Bitnami Shell image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                    |
-| `sysctl.image.pullPolicy`                              | Bitnami Shell image pull policy                                                                               | `IfNotPresent`          |
-| `sysctl.image.pullSecrets`                             | Bitnami Shell image pull secrets                                                                              | `[]`                    |
-| `sysctl.command`                                       | Override default init-sysctl container command (useful when using custom images)                              | `[]`                    |
-| `sysctl.mountHostSys`                                  | Mount the host `/sys` folder to `/host-sys`                                                                   | `false`                 |
-| `sysctl.resources.limits`                              | The resources limits for the init container                                                                   | `{}`                    |
-| `sysctl.resources.requests`                            | The requested resources for the init container                                                                | `{}`                    |
+| Name                                                   | Description                                                                                                        | Value              |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `volumePermissions.enabled`                            | Enable init container that changes the owner/group of the PV mount point to `runAsUser:fsGroup`                    | `false`            |
+| `volumePermissions.image.registry`                     | OS Shell + Utility image registry                                                                                  | `docker.io`        |
+| `volumePermissions.image.repository`                   | OS Shell + Utility image repository                                                                                | `bitnami/os-shell` |
+| `volumePermissions.image.tag`                          | OS Shell + Utility image tag (immutable tags are recommended)                                                      | `11-debian-11-r3`  |
+| `volumePermissions.image.digest`                       | OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`               |
+| `volumePermissions.image.pullPolicy`                   | OS Shell + Utility image pull policy                                                                               | `IfNotPresent`     |
+| `volumePermissions.image.pullSecrets`                  | OS Shell + Utility image pull secrets                                                                              | `[]`               |
+| `volumePermissions.resources.limits`                   | The resources limits for the init container                                                                        | `{}`               |
+| `volumePermissions.resources.requests`                 | The requested resources for the init container                                                                     | `{}`               |
+| `volumePermissions.containerSecurityContext.runAsUser` | Set init container's Security Context runAsUser                                                                    | `0`                |
+| `sysctl.enabled`                                       | Enable init container to modify Kernel settings                                                                    | `false`            |
+| `sysctl.image.registry`                                | OS Shell + Utility image registry                                                                                  | `docker.io`        |
+| `sysctl.image.repository`                              | OS Shell + Utility image repository                                                                                | `bitnami/os-shell` |
+| `sysctl.image.tag`                                     | OS Shell + Utility image tag (immutable tags are recommended)                                                      | `11-debian-11-r3`  |
+| `sysctl.image.digest`                                  | OS Shell + Utility image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`               |
+| `sysctl.image.pullPolicy`                              | OS Shell + Utility image pull policy                                                                               | `IfNotPresent`     |
+| `sysctl.image.pullSecrets`                             | OS Shell + Utility image pull secrets                                                                              | `[]`               |
+| `sysctl.command`                                       | Override default init-sysctl container command (useful when using custom images)                                   | `[]`               |
+| `sysctl.mountHostSys`                                  | Mount the host `/sys` folder to `/host-sys`                                                                        | `false`            |
+| `sysctl.resources.limits`                              | The resources limits for the init container                                                                        | `{}`               |
+| `sysctl.resources.requests`                            | The requested resources for the init container                                                                     | `{}`               |
 
 ### useExternalDNS Parameters
 
@@ -549,7 +554,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 ```console
 helm install my-release \
   --set auth.password=secretpassword \
-    my-repo/redis
+    oci://registry-1.docker.io/bitnamicharts/redis
 ```
 
 The above command sets the Redis&reg; server password to `secretpassword`.
@@ -559,7 +564,7 @@ The above command sets the Redis&reg; server password to `secretpassword`.
 Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml my-repo/redis
+helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/redis
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml)
@@ -723,7 +728,7 @@ By default, the chart mounts a [Persistent Volume](https://kubernetes.io/docs/co
 3. Install the chart
 
 ```console
-helm install my-release --set master.persistence.existingClaim=PVC_NAME my-repo/redis
+helm install my-release --set master.persistence.existingClaim=PVC_NAME oci://registry-1.docker.io/bitnamicharts/redis
 ```
 
 ## Backup and restore
@@ -749,6 +754,18 @@ Find more information about how to deal with common errors related to Bitnami's 
 ## Upgrading
 
 A major chart version change (like v1.2.3 -> v2.0.0) indicates that there is an incompatible breaking change needing manual actions.
+
+### RDB compatibility
+
+It's common to have RDB format changes across Redis&reg; releases where we see backward compatibility but no forward compatibility. For example, v7.0 can load an RDB created by v6.2 , but the opposite is not true.
+When that's the case, the rolling update can cause replicas to temporarily stop synchronizing while they are running a lower version than master.
+For example, on a rolling update `master-0` and `replica-2` are updated first from version v6.2 to v7.0; `replica-0` and `replica-1` won't be able to start a full sync with `master-0` because they are still running v6.2 and can't support the RDB format from version 7.0 that master is now using.
+This issue can be mitigated by splitting the upgrade into two stages: one for all replicas and another for any master.
+
+- Stage 1 (replicas only, as there's no master with an ordinal higher than 99):
+`helm upgrade oci://registry-1.docker.io/bitnamicharts/redis --set master.updateStrategy.rollingUpdate.partition=99`
+- Stage 2 (anything else that is not up to date, in this case only master):
+`helm upgrade oci://registry-1.docker.io/bitnamicharts/redis`
 
 ### To 17.0.0
 
@@ -800,7 +817,7 @@ Backwards compatibility is not guaranteed. To upgrade to `14.0.0`, install a new
 - Reuse the PVC used to hold the master data on your previous release. To do so, use the `master.persistence.existingClaim` parameter. The following example assumes that the release name is `redis`:
 
 ```console
-helm install redis my-repo/redis --set auth.password=[PASSWORD] --set master.persistence.existingClaim=[EXISTING_PVC]
+helm install redis oci://registry-1.docker.io/bitnamicharts/redis --set auth.password=[PASSWORD] --set master.persistence.existingClaim=[EXISTING_PVC]
 ```
 
 | Note: you need to substitute the placeholder *[EXISTING_PVC]* with the name of the PVC used on your previous release, and *[PASSWORD]* with the password used in your previous release.
@@ -864,14 +881,14 @@ This version causes a change in the Redis&reg; Master StatefulSet definition, so
 - Recommended: Create a clone of the Redis&reg; Master PVC (for example, using projects like [this one](https://github.com/edseymour/pvc-transfer)). Then launch a fresh release reusing this cloned PVC.
 
 ```console
-helm install my-release my-repo/redis --set persistence.existingClaim=<NEW PVC>
+helm install my-release oci://registry-1.docker.io/bitnamicharts/redis --set persistence.existingClaim=<NEW PVC>
 ```
 
 - Alternative (not recommended, do at your own risk): `helm delete --purge` does not remove the PVC assigned to the Redis&reg; Master StatefulSet. As a consequence, the following commands can be done to upgrade the release
 
 ```console
 helm delete --purge <RELEASE>
-helm install <RELEASE> my-repo/redis
+helm install <RELEASE> oci://registry-1.docker.io/bitnamicharts/redis
 ```
 
 Previous versions of the chart were not using persistence in the slaves, so this upgrade would add it to them. Another important change is that no values are inherited from master to slaves. For example, in 6.0.0 `slaves.readinessProbe.periodSeconds`, if empty, would be set to `master.readinessProbe.periodSeconds`. This approach lacked transparency and was difficult to maintain. From now on, all the slave parameters must be configured just as it is done with the masters.
@@ -924,7 +941,7 @@ kubectl patch deployments my-release-redis-metrics --type=json -p='[{"op": "remo
 
 ## License
 
-Copyright &copy; 2023 Bitnami
+Copyright &copy; 2023 VMware, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

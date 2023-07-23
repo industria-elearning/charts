@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if .Values.serviceMonitor.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -38,6 +43,9 @@ spec:
       {{- if .Values.serviceMonitor.metricRelabelings }}
       metricRelabelings: {{- include "common.tplvalues.render" ( dict "value" .Values.serviceMonitor.metricRelabelings "context" $) | nindent 8 }}
       {{- end }}
+      {{- if .Values.serviceMonitor.extraParameters }}
+      {{- toYaml .Values.serviceMonitor.extraParameters | nindent 6 }}
+      {{- end }}
     {{- if .Values.selfMonitor.enabled }}
     - port: metrics
       {{- if .Values.serviceMonitor.interval }}
@@ -54,6 +62,9 @@ spec:
       {{- end }}
       {{- if .Values.serviceMonitor.metricRelabelings }}
       metricRelabelings: {{- include "common.tplvalues.render" ( dict "value" .Values.serviceMonitor.metricRelabelings "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.serviceMonitor.extraParameters }}
+      {{- toYaml .Values.serviceMonitor.extraParameters | nindent 6 }}
       {{- end }}
     {{- end }}
   namespaceSelector:

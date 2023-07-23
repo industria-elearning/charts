@@ -1,3 +1,8 @@
+{{- /*
+Copyright VMware, Inc.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
 {{- if .Values.networkPolicy.enabled }}
 kind: NetworkPolicy
 apiVersion: {{ template "common.capabilities.networkPolicy.apiVersion" . }}
@@ -13,7 +18,7 @@ metadata:
   {{- end }}
 spec:
   podSelector:
-    matchLabels: {{- include "common.labels.standard" . | nindent 6 }}
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       {{- if .Values.podLabels }}
       {{- include "common.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 6 }}
       {{- end }}
