@@ -5,12 +5,12 @@ entries:
       category: Infrastructure
       licenses: Apache-2.0
     apiVersion: v2
-    appVersion: 2.2.4
-    created: "2023-03-29T00:13:19.6008123-05:00"
+    appVersion: 2.6.0
+    created: "2024-08-27T19:14:42.2972133-05:00"
     description: A Library Helm Chart for grouping common logic between bitnami charts.
       This chart is not deployable by itself.
-    digest: 84b8c0d3cd788d15d0b14f17bbc7b41353b9d5ff81b4647ddc288656630a645a
-    home: https://github.com/bitnami/charts/tree/main/bitnami/common
+    digest: 64fb3a16f648a52e9923759571452836b0906dedfd6e65e4949e3bdd7bddfbdc
+    home: https://bitnami.com
     icon: https://bitnami.com/downloads/logos/bitnami-mark.png
     keywords:
     - common
@@ -19,34 +19,33 @@ entries:
     - function
     - bitnami
     maintainers:
-    - name: Bitnami
+    - name: VMware, Inc.
       url: https://github.com/bitnami/charts
     name: common
     sources:
     - https://github.com/bitnami/charts
-    - https://www.bitnami.com/
     type: library
     urls:
-    - charts/common-2.2.4.tgz
-    version: 2.2.4
+    - charts/common-2.6.0.tgz
+    version: 2.6.0
   mariadb:
   - annotations:
       category: Database
       licenses: Apache-2.0
     apiVersion: v2
-    appVersion: 10.6.12
-    created: "2023-03-29T00:13:19.6044277-05:00"
+    appVersion: 11.0.2
+    created: "2024-08-27T19:14:42.2996369-05:00"
     dependencies:
     - name: common
-      repository: https://charts.bitnami.com/bitnami
+      repository: oci://registry-1.docker.io/bitnamicharts
       tags:
       - bitnami-common
       version: 2.x.x
     description: MariaDB is an open source, community-developed SQL database server
       that is widely in use around the world due to its enterprise features, flexibility,
       and collaboration with leading tech firms.
-    digest: 40cd93285012baa0ac72160ab2c145414e54cce1888deb0cfda5c4abfc9f6483
-    home: https://github.com/bitnami/charts/tree/main/bitnami/mariadb
+    digest: 0ee96e484abfb059c6abf03f1245d4f1fdbaaf0fbee107f5a820e1e85c8bdc10
+    home: https://bitnami.com
     icon: https://bitnami.com/assets/stacks/mariadb/img/mariadb-stack-220x234.png
     keywords:
     - mariadb
@@ -55,23 +54,56 @@ entries:
     - sql
     - prometheus
     maintainers:
-    - name: Bitnami
+    - name: VMware, Inc.
       url: https://github.com/bitnami/charts
     name: mariadb
     sources:
-    - https://github.com/bitnami/containers/tree/main/bitnami/mariadb
-    - https://github.com/prometheus/mysqld_exporter
-    - https://mariadb.org
+    - https://github.com/bitnami/charts/tree/main/bitnami/mariadb
     urls:
-    - charts/mariadb-11.5.3.tgz
-    version: 11.5.3
+    - charts/mariadb-13.0.0.tgz
+    version: 13.0.0
   moodle:
   - annotations:
       category: E-Learning
       licenses: Apache-2.0
     apiVersion: v2
+    appVersion: 4.2.1
+    created: "2024-08-27T19:14:42.2972133-05:00"
+    dependencies:
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.x.x
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: Moodle(TM) LMS is an open source online Learning Management System
+      widely used at universities, schools, and corporations. It is modular and highly
+      adaptable to any type of online learning.
+    digest: 62f9c416863b06f611ffaae6ee9af7dd9e6258aeb099e606d7da8f0ccc15935b
+    home: https://bitnami.com
+    icon: https://bitnami.com/assets/stacks/moodle/img/moodle-stack-220x234.png
+    keywords:
+    - moodle
+    - learning
+    - php
+    maintainers:
+    - name: VMware, Inc.
+      url: https://github.com/bitnami/charts
+    name: moodle
+    sources:
+    - https://github.com/bitnami/charts/tree/main/bitnami/moodle
+    urls:
+    - moodle-17.0.0.tgz
+    version: 17.0.0
+  - annotations:
+      category: E-Learning
+      licenses: Apache-2.0
+    apiVersion: v2
     appVersion: 4.1.2
-    created: "2023-03-29T00:13:19.6002965-05:00"
+    created: "2024-08-27T19:14:42.2906839-05:00"
     dependencies:
     - condition: mariadb.enabled
       name: mariadb
@@ -102,4 +134,4 @@ entries:
     urls:
     - moodle-14.3.13.tgz
     version: 14.3.13
-generated: "2023-03-29T00:13:19.595621-05:00"
+generated: "2024-08-27T19:14:42.2853414-05:00"
