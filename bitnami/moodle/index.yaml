@@ -6,7 +6,7 @@ entries:
       licenses: Apache-2.0
     apiVersion: v2
     appVersion: 2.6.0
-    created: "2024-08-27T19:14:42.2972133-05:00"
+    created: "2024-08-27T19:28:18.1812775-05:00"
     description: A Library Helm Chart for grouping common logic between bitnami charts.
       This chart is not deployable by itself.
     digest: 64fb3a16f648a52e9923759571452836b0906dedfd6e65e4949e3bdd7bddfbdc
@@ -34,7 +34,7 @@ entries:
       licenses: Apache-2.0
     apiVersion: v2
     appVersion: 11.0.2
-    created: "2024-08-27T19:14:42.2996369-05:00"
+    created: "2024-08-27T19:28:18.182285-05:00"
     dependencies:
     - name: common
       repository: oci://registry-1.docker.io/bitnamicharts
@@ -68,7 +68,7 @@ entries:
       licenses: Apache-2.0
     apiVersion: v2
     appVersion: 4.2.1
-    created: "2024-08-27T19:14:42.2972133-05:00"
+    created: "2024-08-27T19:28:18.1802706-05:00"
     dependencies:
     - condition: mariadb.enabled
       name: mariadb
@@ -82,7 +82,7 @@ entries:
     description: Moodle(TM) LMS is an open source online Learning Management System
       widely used at universities, schools, and corporations. It is modular and highly
       adaptable to any type of online learning.
-    digest: 62f9c416863b06f611ffaae6ee9af7dd9e6258aeb099e606d7da8f0ccc15935b
+    digest: b9be1b6221edc1c9cf642f787f05ddf584294b9bc94a47079997964f7a84f05e
     home: https://bitnami.com
     icon: https://bitnami.com/assets/stacks/moodle/img/moodle-stack-220x234.png
     keywords:
@@ -103,7 +103,7 @@ entries:
       licenses: Apache-2.0
     apiVersion: v2
     appVersion: 4.1.2
-    created: "2024-08-27T19:14:42.2906839-05:00"
+    created: "2024-08-27T19:28:18.1776164-05:00"
     dependencies:
     - condition: mariadb.enabled
       name: mariadb
@@ -134,4 +134,4 @@ entries:
     urls:
     - moodle-14.3.13.tgz
     version: 14.3.13
-generated: "2024-08-27T19:14:42.2853414-05:00"
+generated: "2024-08-27T19:28:18.1719178-05:00"
