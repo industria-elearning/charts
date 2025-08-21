@@ -1,5 +1,5 @@
 {{/*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -29,12 +29,34 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
-Return the appropriate apiVersion for PodSecurityPolicy.
+Create the name of the unsealer cluster role
 */}}
-{{- define "podSecurityPolicy.apiVersion" -}}
-{{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
-{{- print "policy/v1beta1" -}}
+{{- define "sealed-secrets.clusterRoleName" -}}
+{{- if .Values.rbac.clusterRoleName -}}
+    {{ printf "%s" .Values.rbac.clusterRoleName }}
 {{- else -}}
-{{- print "extensions/v1beta1" -}}
+    {{ printf "%s-unsealer" (include "common.names.fullname" .) }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create the name of the unsealer namespaced cluster role
+*/}}
+{{- define "sealed-secrets.namespacedRoleName" -}}
+{{- if .Values.rbac.namespacedRolesName -}}
+    {{ printf "%s" .Values.rbac.namespacedRolesName }}
+{{- else -}}
+    {{ printf "%s-unsealer" (include "common.names.fullname" .) | quote }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create the name of the secret that hold keys
+*/}}
+{{- define "sealed-secrets.secretName" -}}
+{{- if .Values.secretName -}}
+    {{ printf "%s" .Values.secretName }}
+{{- else -}}
+    {{ printf "%s-key" (include "common.names.fullname" .) | quote }}
 {{- end -}}
 {{- end -}}

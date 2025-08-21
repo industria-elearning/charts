@@ -2,6 +2,28 @@ CHART NAME: {{ .Chart.Name }}
 CHART VERSION: {{ .Chart.Version }}
 APP VERSION: {{ .Chart.AppVersion }}
 
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
+{{- if (include "elasticsearch.singleNode.enabled" .) }}
+
+-------------------------------------------------------------------------------
+ WARNING
+
+    Elasticsearch is only running one master node replica, assuming all the
+    roles and with "single-node" discovery configured. If you want to scale up
+    to more replicas, make sure you refresh the configuration of the existing
+    statefulset. For example, scale down to 0 replicas first to avoid
+    inconsistencies in the configuration:
+
+      kubectl scale --namespace {{ include "common.names.namespace" . }} statefulset {{ .Release.Name }}-master --replicas=0
+      helm upgrade --namespace {{ include "common.names.namespace" . }} {{ .Release.Name }} oci://registry-1.docker.io/bitnamicharts/elasticsearch --reset-values --set master.masterOnly=false
+
+    Please note that the master nodes should continue assuming all the roles
+    (master.masterOnly: false) since there is shard data on the first replica.
+-------------------------------------------------------------------------------
+{{- end }}
 {{- if contains .Values.service.type "LoadBalancer" }}
 
 -------------------------------------------------------------------------------
@@ -119,3 +141,6 @@ In order to replicate the container startup scripts execute this command:
 
 {{- end }}
 {{ include "elasticsearch.validateValues" . }}
+{{- include "common.warnings.resources" (dict "sections" (list "coordinating" "data" "ingest" "master" "metrics" "sysctlImage" "volumePermissions") "context" $) }}
+{{- include "common.warnings.modifiedImages" (dict "images" (list .Values.image .Values.metrics.image .Values.volumePermissions.image .Values.sysctlImage ) "context" $) }}
+{{- include "common.errors.insecureImages" (dict "images" (list .Values.image .Values.metrics.image .Values.volumePermissions.image .Values.sysctlImage ) "context" $) }}

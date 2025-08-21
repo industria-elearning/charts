@@ -1,34 +1,22 @@
 {{/*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
 {{/* vim: set filetype=mustache: */}}
 
 {{/*
-Return the proper Fluentd image name
+Return the Fluentd image name
 */}}
-{{- define "fluentd.forwarder.image" -}}
-{{- $registryName := default .Values.image.registry .Values.forwarder.image.registry -}}
-{{- $repositoryName := default .Values.image.repository .Values.forwarder.image.repository -}}
-{{- $tag := default .Values.image.tag .Values.forwarder.image.tag -}}
-{{- $imageRoot := dict "registry" $registryName "repository" $repositoryName "tag" $tag -}}
-{{ include "common.images.image" (dict "imageRoot" $imageRoot "global" .Values.global) }}
-{{- end -}}
-
-{{- define "fluentd.aggregator.image" -}}
-{{- $registryName := default .Values.image.registry .Values.aggregator.image.registry -}}
-{{- $repositoryName := default .Values.image.repository .Values.aggregator.image.repository -}}
-{{- $tag := default .Values.image.tag .Values.aggregator.image.tag -}}
-{{- $imageRoot := dict "registry" $registryName "repository" $repositoryName "tag" $tag -}}
-{{ include "common.images.image" (dict "imageRoot" $imageRoot "global" .Values.global) }}
+{{- define "fluentd.image" -}}
+{{- include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) -}}
 {{- end -}}
 
 {{/*
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "fluentd.imagePullSecrets" -}}
-{{- include "common.images.pullSecrets" (dict "images" (list .Values.image) "global" .Values.global) -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) -}}
 {{- end -}}
 
 {{/*
@@ -55,10 +43,7 @@ Create the name of the aggregator service account to use
 
 {{/* Check if there are rolling tags in the images */}}
 {{- define "fluentd.checkRollingTags" -}}
-{{- if and (contains "bitnami/" .Values.image.repository) (not (.Values.image.tag | toString | regexFind "-r\\d+$|sha256:")) }}
-WARNING: Rolling tag detected ({{ .Values.image.repository }}:{{ .Values.image.tag }}), please note that it is strongly recommended to avoid using rolling tags in a production environment.
-+info https://docs.bitnami.com/containers/how-to/understand-rolling-tags-containers/
-{{- end }}
+{{- include "common.warnings.rollingTag" .Values.image }}
 {{- end -}}
 
 {{/*
@@ -203,4 +188,32 @@ Get the initialization aggregator scripts volume name.
 */}}
 {{- define "fluentd.aggregator.initScripts" -}}
 {{- printf "%s-aggregator-init-scripts" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Get the initialization forwarder scripts ConfigMap name.
+*/}}
+{{- define "fluentd.forwarder.initScriptsCM" -}}
+{{- printf "%s" .Values.forwarder.initScriptsCM -}}
+{{- end -}}
+
+{{/*
+Get the initialization aggregator scripts ConfigMap name.
+*/}}
+{{- define "fluentd.aggregator.initScriptsCM" -}}
+{{- printf "%s" .Values.aggregator.initScriptsCM -}}
+{{- end -}}
+
+{{/*
+Get the initialization forwarder scripts Secret name.
+*/}}
+{{- define "fluentd.forwarder.initScriptsSecret" -}}
+{{- printf "%s" .Values.forwarder.initScriptsSecret -}}
+{{- end -}}
+
+{{/*
+Get the initialization aggregator scripts Secret name.
+*/}}
+{{- define "fluentd.aggregator.initScriptsSecret" -}}
+{{- printf "%s" .Values.aggregator.initScriptsSecret -}}
 {{- end -}}

@@ -1,5 +1,5 @@
 {{/*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -7,7 +7,7 @@ SPDX-License-Identifier: APACHE-2.0
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "apisix.imagePullSecrets" -}}
-{{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.dashboard.image .Values.ingressController.image) "global" .Values.global) -}}
+{{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.ingressController.image) "global" .Values.global) -}}
 {{- end -}}
 
 {{/*
@@ -213,94 +213,13 @@ Name of the ingress-controller ConfigMap
 {{- end -}}
 
 {{/*
-Name of the dashboard ConfigMap
+Name of the ingress-controller ConfigMap
 */}}
 {{- define "apisix.ingress-controller.extraConfigmapName" -}}
 {{- if .Values.ingressController.extraConfigExistingConfigMap -}}
     {{- include "common.tplvalues.render" (dict "value" .Values.ingressController.extraConfigExistingConfigMap "context" $) -}}
 {{- else -}}
     {{- printf "%s-extra" (include "apisix.ingress-controller.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Return the proper APISIX Dashboard image name
-*/}}
-{{- define "apisix.dashboard.image" -}}
-{{- include "common.images.image" (dict "imageRoot" .Values.dashboard.image "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Return the proper APISIX Dashboard fullname
-*/}}
-{{- define "apisix.dashboard.fullname" -}}
-{{- printf "%s-%s" (include "common.names.fullname" .) "dashboard" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-Return the proper APISIX Dashboard fullname (with namespace)
-*/}}
-{{- define "apisix.dashboard.fullname.namespace" -}}
-{{- printf "%s-%s" (include "common.names.fullname.namespace" .) "dashboard" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-Create the name of the service account to use (APISIX Dashboard)
-*/}}
-{{- define "apisix.dashboard.serviceAccountName" -}}
-{{- if .Values.dashboard.serviceAccount.create -}}
-    {{- default (include "apisix.dashboard.fullname" .) .Values.dashboard.serviceAccount.name -}}
-{{- else -}}
-    {{- default "default" .Values.dashboard.serviceAccount.name -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Name of the dashboard ConfigMap
-*/}}
-{{- define "apisix.dashboard.defaultConfigmapName" -}}
-{{- if .Values.dashboard.existingConfigMap -}}
-    {{- include "common.tplvalues.render" (dict "value" .Values.dashboard.existingConfigMap "context" $) -}}
-{{- else -}}
-    {{- printf "%s-default" (include "apisix.dashboard.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Name of the control-plane ConfigMap
-*/}}
-{{- define "apisix.dashboard.extraConfigmapName" -}}
-{{- if .Values.dashboard.extraConfigExistingConfigMap -}}
-    {{- include "common.tplvalues.render" (dict "value" .Values.dashboard.extraConfigExistingConfigMap "context" $) -}}
-{{- else -}}
-    {{- printf "%s-extra" (include "apisix.dashboard.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Name of the control-plane ConfigMap
-*/}}
-{{- define "apisix.dashboard.secretName" -}}
-{{- if .Values.dashboard.existingSecret -}}
-    {{- include "common.tplvalues.render" (dict "value" .Values.dashboard.existingSecret "context" $) -}}
-{{- else -}}
-    {{- include "apisix.dashboard.fullname" . -}}
-{{- end -}}
-{{- end -}}
-
-{{- define "apisix.dashboard.tlsSecretName" -}}
-{{- if .Values.dashboard.tls.existingSecret -}}
-    {{- include "common.tplvalues.render" (dict "value" .Values.dashboard.tls.existingSecret "context" $) -}}
-{{- else -}}
-    {{- printf "%s-tls" (include "apisix.dashboard.fullname" .) -}}
-{{- end -}}
-{{- end -}}
-
-{{- define "apisix.dashboard.secretPasswordKey" -}}
-{{- if .Values.dashboard.existingSecretPasswordKey -}}
-    {{- print .Values.dashboard.existingSecretPasswordKey -}}
-{{- else -}}
-    {{- print "password" -}}
 {{- end -}}
 {{- end -}}
 
@@ -315,7 +234,7 @@ Init container definition for waiting for the database to be ready
 # This init container renders and merges the APISIX configuration files, as well
 # as preparing the Nginx server. We need to use a volume because we're working with
 # ReadOnlyRootFilesystem
-- name: prepare-apisix
+- name: prepare-apisix-dirs
   image: {{ template "apisix.image" .context }}
   imagePullPolicy: {{ .context.Values.image.pullPolicy }}
   {{- $block := "" }}
@@ -325,7 +244,7 @@ Init container definition for waiting for the database to be ready
   {{- $block = index .context.Values "controlPlane" }}
   {{- end }}
   {{- if $block.containerSecurityContext.enabled }}
-  securityContext: {{- omit $block.containerSecurityContext "enabled" | toYaml | nindent 4 }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" $block.containerSecurityContext "context" .context) | nindent 4 }}
   {{- end }}
   command:
     - bash
@@ -334,12 +253,20 @@ Init container definition for waiting for the database to be ready
       #!/bin/bash
       cp -R /opt/bitnami/apisix/conf /usr/local/apisix
       ln -sf /opt/bitnami/apisix/deps /usr/local/apisix
+      ln -sf /opt/bitnami/apisix/ui /usr/local/apisix
       ln -sf /opt/bitnami/apisix/openresty/luajit/share/lua/*/apisix /usr/local/apisix
       mkdir -p /usr/local/apisix/logs
+    {{- if .context.Values.usePasswordFiles }}
+      {{- if .context.Values.controlPlane.enabled }}
+      export APISIX_ADMIN_API_TOKEN="$(< $APISIX_ADMIN_API_TOKEN_FILE)"
+      export APISIX_VIEWER_API_TOKEN="$(< $APISIX_VIEWER_API_TOKEN_FILE)"
+      {{- end }}
+      {{- if (include "apisix.etcd.authEnabled" .context) }}
+      export APISIX_ETCD_PASSWORD="$(< $APISIX_ETCD_PASSWORD_FILE)"
+      {{- end }}
+    {{- end }}
       # Build final config.yaml with the sections of the different files
-      find /bitnami/apisix/conf -type f -name *.yaml -print0 | sort -z | xargs -0 yq eval-all '. as $item ireduce ({}; . * $item )' > /usr/local/apisix/conf/pre-render-config.yaml
-      render-template /usr/local/apisix/conf/pre-render-config.yaml > /usr/local/apisix/conf/config.yaml
-      rm /usr/local/apisix/conf/pre-render-config.yaml
+      cp /bitnami/apisix/rendered-conf/config.yaml /usr/local/apisix/conf/
       chmod 644 /usr/local/apisix/conf/config.yaml
       apisix init
       {{- if eq .component "control-plane" }}
@@ -353,6 +280,13 @@ Init container definition for waiting for the database to be ready
   env:
     - name: BITNAMI_DEBUG
       value: {{ ternary "true" "false" (or .context.Values.image.debug .context.Values.diagnosticMode.enabled) | quote }}
+    {{- if .context.Values.controlPlane.enabled }}
+    {{- if .context.Values.usePasswordFiles }}
+    - name: APISIX_ADMIN_API_TOKEN_FILE
+      value: {{ printf "/opt/bitnami/apisix/secrets/%s" (include "apisix.control-plane.adminTokenKey" .context) }}
+    - name: APISIX_VIEWER_API_TOKEN_FILE
+      value: {{ printf "/opt/bitnami/apisix/secrets/%s" (include "apisix.control-plane.viewerTokenKey" .context) }}
+    {{- else }}
     - name: APISIX_ADMIN_API_TOKEN
       valueFrom:
         secretKeyRef:
@@ -363,17 +297,24 @@ Init container definition for waiting for the database to be ready
         secretKeyRef:
           name: {{ include "apisix.control-plane.secretName" .context }}
           key: {{ include "apisix.control-plane.viewerTokenKey" .context }}
+    {{- end }}
+    {{- end }}
     {{- if (include "apisix.etcd.authEnabled" .context) }}
     - name: APISIX_ETCD_USER
       value: {{ include "apisix.etcd.user" .context }}
+    {{- if .context.Values.usePasswordFiles }}
+    - name: APISIX_ETCD_PASSWORD_FILE
+      value: {{ printf "/opt/bitnami/apisix/secrets/%s" (include "apisix.etcd.secretPasswordKey" .context) }}
+    {{- else }}
     - name: APISIX_ETCD_PASSWORD
       valueFrom:
         secretKeyRef:
           name: {{ include "apisix.etcd.secretName" .context }}
           key: {{ include "apisix.etcd.secretPasswordKey" .context }}
     {{- end }}
+    {{- end }}
     {{- if $block.extraEnvVars }}
-    {{- include "common.tplvalues.render" (dict "value" $block.extraEnvVars "context" $) | nindent 4 }}
+    {{- include "common.tplvalues.render" (dict "value" $block.extraEnvVars "context" .context) | nindent 4 }}
     {{- end }}
   envFrom:
     {{- if $block.extraEnvVarsCM }}
@@ -382,18 +323,21 @@ Init container definition for waiting for the database to be ready
     {{- end }}
     {{- if $block.extraEnvVarsSecret }}
     - secretRef:
-        name: {{ include "common.tplvalues.render" (dict "value" $block.extraEnvVarsSecret "context" $) }}
+        name: {{ include "common.tplvalues.render" (dict "value" $block.extraEnvVarsSecret "context" .context) }}
     {{- end }}
   volumeMounts:
-    - name: apisix-dir
+    - name: empty-dir
       mountPath: /usr/local/apisix
-    - name: config
-      mountPath: /bitnami/apisix/conf/00_default
-    - name: tmp
+      subPath: app-tmp-dir
+    - name: empty-dir
+      mountPath: /bitnami/apisix/rendered-conf
+      subPath: app-conf-dir
+    - name: empty-dir
       mountPath: /tmp
-    {{- if or $block.extraConfig $block.extraConfigExistingConfigMap }}
-    - name: extra-config
-      mountPath: /bitnami/apisix/conf/01_extra
+      subPath: tmp-dir
+    {{- if and .context.Values.usePasswordFiles (or .context.Values.controlPlane.enabled (include "apisix.etcd.authEnabled" .context)) }}
+    - name: apisix-secrets
+      mountPath: /opt/bitnami/apisix/secrets
     {{- end }}
     {{- if $block.tls.enabled }}
     - name: certs
@@ -409,7 +353,7 @@ Init container definition for waiting for the database to be ready
   image: {{ template "apisix.wait-container.image" . }}
   imagePullPolicy: {{ .Values.waitContainer.image.pullPolicy }}
   {{- if .Values.waitContainer.containerSecurityContext.enabled }}
-  securityContext: {{- omit .Values.waitContainer.containerSecurityContext "enabled" | toYaml | nindent 4 }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.waitContainer.containerSecurityContext "context" $) | nindent 4 }}
   {{- end }}
   command:
     - bash
@@ -441,8 +385,13 @@ Init container definition for waiting for the database to be ready
       )
 
       check_etcd() {
+          local curl_options=()
+          {{- if and .Values.etcd.auth.client.secureTransport .Values.etcd.auth.client.useAutoTLS }}
+          curl_options=("--insecure" ${curl_options[*]})
+          {{- end }}
+
           local -r etcd_host="${1:-?missing etcd}"
-          if curl --max-time 5 "${etcd_host}/version" | grep etcdcluster; then
+          if curl "${curl_options[@]}" --max-time 5 "${etcd_host}/version" | grep etcdcluster; then
              return 0
           else
              return 1
@@ -471,7 +420,7 @@ Init container definition for waiting for the database to be ready
   image: {{ template "apisix.wait-container.image" . }}
   imagePullPolicy: {{ .Values.waitContainer.image.pullPolicy }}
   {{- if .Values.waitContainer.containerSecurityContext.enabled }}
-  securityContext: {{- omit .Values.waitContainer.containerSecurityContext "enabled" | toYaml | nindent 4 }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.waitContainer.containerSecurityContext "context" $) | nindent 4 }}
   {{- end }}
   command:
     - bash
@@ -527,23 +476,25 @@ Init container definition for waiting for the database to be ready
 {{- end }}
 
 {{/*
-Render configuration for the dashboard and ingress-controller components
+Render configuration for the APISIX components
 */}}
 {{- define "apisix.renderConfInitContainer" -}}
 # This init container renders and merges the APISIX configuration files, as well
 # as preparing the Nginx server. We need to use a volume because we're working with
 # ReadOnlyRootFilesystem
 - name: render-conf
-  image: {{ template "apisix.image" .context }}
+  image: {{ template "apisix.wait-container.image" .context }}
   imagePullPolicy: {{ .context.Values.image.pullPolicy }}
   {{- $block := "" }}
   {{- if eq .component "ingress-controller" }}
   {{- $block = index .context.Values "ingressController" }}
-  {{- else }}
-  {{- $block = index .context.Values "dashboard" }}
+  {{- else if eq .component "control-plane" }}
+  {{- $block = index .context.Values "controlPlane" }}
+  {{- else if eq .component "data-plane" }}
+  {{- $block = index .context.Values "dataPlane" }}
   {{- end }}
   {{- if $block.containerSecurityContext.enabled }}
-  securityContext: {{- omit $block.containerSecurityContext "enabled" | toYaml | nindent 4 }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" $block.containerSecurityContext "context" .context) | nindent 4 }}
   {{- end }}
   command:
     - bash
@@ -551,6 +502,15 @@ Render configuration for the dashboard and ingress-controller components
     - |
       #!/bin/bash
       # Build final config.yaml with the sections of the different files
+    {{- if .context.Values.usePasswordFiles }}
+      {{- if .context.Values.controlPlane.enabled }}
+      export APISIX_ADMIN_API_TOKEN="$(< $APISIX_ADMIN_API_TOKEN_FILE)"
+      export APISIX_VIEWER_API_TOKEN="$(< $APISIX_VIEWER_API_TOKEN_FILE)"
+      {{- end }}
+      {{- if (include "apisix.etcd.authEnabled" .context) }}
+      export APISIX_ETCD_PASSWORD="$(< $APISIX_ETCD_PASSWORD_FILE)"
+      {{- end }}
+    {{- end }}
       find /bitnami/apisix/conf -type f -name *.yaml -print0 | sort -z | xargs -0 yq eval-all '. as $item ireduce ({}; . * $item )' > /bitnami/apisix/rendered-conf/pre-render-config.yaml
       render-template /bitnami/apisix/rendered-conf/pre-render-config.yaml > /bitnami/apisix/rendered-conf/config.yaml
       chmod 644 /bitnami/apisix/rendered-conf/config.yaml
@@ -558,6 +518,13 @@ Render configuration for the dashboard and ingress-controller components
   env:
     - name: BITNAMI_DEBUG
       value: {{ ternary "true" "false" (or .context.Values.image.debug .context.Values.diagnosticMode.enabled) | quote }}
+    {{- if .context.Values.controlPlane.enabled }}
+    {{- if .context.Values.usePasswordFiles }}
+    - name: APISIX_ADMIN_API_TOKEN_FILE
+      value: {{ printf "/opt/bitnami/apisix/secrets/%s" (include "apisix.control-plane.adminTokenKey" .context) }}
+    - name: APISIX_VIEWER_API_TOKEN_FILE
+      value: {{ printf "/opt/bitnami/apisix/secrets/%s" (include "apisix.control-plane.viewerTokenKey" .context) }}
+    {{- else }}
     - name: APISIX_ADMIN_API_TOKEN
       valueFrom:
         secretKeyRef:
@@ -568,23 +535,21 @@ Render configuration for the dashboard and ingress-controller components
         secretKeyRef:
           name: {{ include "apisix.control-plane.secretName" .context }}
           key: {{ include "apisix.control-plane.viewerTokenKey" .context }}
+    {{- end }}
+    {{- end }}
     {{- if (include "apisix.etcd.authEnabled" .context) }}
     - name: APISIX_ETCD_USER
       value: {{ include "apisix.etcd.user" .context }}
+    {{- if .context.Values.usePasswordFiles }}
+    - name: APISIX_ETCD_PASSWORD_FILE
+      value: {{ printf "/opt/bitnami/apisix/secrets/%s" (include "apisix.etcd.secretPasswordKey" .context) }}
+    {{- else }}
     - name: APISIX_ETCD_PASSWORD
       valueFrom:
         secretKeyRef:
           name: {{ include "apisix.etcd.secretName" .context }}
           key: {{ include "apisix.etcd.secretPasswordKey" .context }}
     {{- end }}
-    {{- if eq .component "dashboard" }}
-    - name: APISIX_DASHBOARD_USER
-      value: {{ $block.username | quote }}
-    - name: APISIX_DASHBOARD_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: {{ include "apisix.dashboard.secretName" .context }}
-          key: {{ include "apisix.dashboard.secretPasswordKey" .context }}
     {{- end }}
     {{- if $block.extraEnvVars }}
     {{- include "common.tplvalues.render" (dict "value" $block.extraEnvVars "context" $) | nindent 4 }}
@@ -599,10 +564,15 @@ Render configuration for the dashboard and ingress-controller components
         name: {{ include "common.tplvalues.render" (dict "value" $block.extraEnvVarsSecret "context" $) }}
     {{- end }}
   volumeMounts:
-    - name: rendered-config
+    - name: empty-dir
       mountPath: /bitnami/apisix/rendered-conf
+      subPath: app-conf-dir
     - name: config
       mountPath: /bitnami/apisix/conf/00_default
+    {{- if and .context.Values.usePasswordFiles (or .context.Values.controlPlane.enabled (include "apisix.etcd.authEnabled" .context)) }}
+    - name: apisix-secrets
+      mountPath: /opt/bitnami/apisix/secrets
+    {{- end }}
     {{- if or $block.extraConfig $block.extraConfigExistingConfigMap }}
     - name: extra-config
       mountPath: /bitnami/apisix/conf/01_extra
@@ -692,7 +662,7 @@ Validate values for APISIX.
 Function to validate the controller deployment
 */}}
 {{- define "apisix.validateValues.controllers" -}}
-{{- if not (or .Values.dataPlane.enabled .Values.controlPlane.enabled .Values.dashboard.enabled .Values.ingressController.enabled) -}}
+{{- if not (or .Values.dataPlane.enabled .Values.controlPlane.enabled .Values.ingressController.enabled) -}}
 apisix: Missing controllers. At least one controller should be enabled.
 {{- end -}}
 {{- end -}}

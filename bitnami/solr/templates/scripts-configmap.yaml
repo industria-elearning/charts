@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -7,12 +7,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ printf "%s-scripts" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
-  namespace: {{ .Release.Namespace | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: solr
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -21,6 +18,11 @@ data:
     #!/bin/bash
 
     . /opt/bitnami/scripts/liblog.sh
+
+    {{- if .Values.usePasswordFiles }}
+    export SOLR_SSL_KEY_STORE_PASSWORD="$(< $SOLR_SSL_KEY_STORE_PASSWORD_FILE)"
+    export SOLR_SSL_TRUST_STORE_PASSWORD="$(< $SOLR_SSL_TRUST_STORE_PASSWORD_FILE)"
+    {{- end }}
 
     if [[ -f "/certs/keystore.p12" ]] && [[ -f "/certs/truststore.p12" ]]; then
         # the user provided keystore.p12 and truststore.p12 files (prefered)
@@ -52,5 +54,5 @@ data:
     fi
     {{- end }}
     # Use hostname instead of IP to register in ZooKeeper
-    export SOLR_HOST="${MY_POD_NAME}.{{ printf "%s-headless" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+    export SOLR_HOST="${MY_POD_NAME}.{{ printf "%s-headless" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}.{{ include "common.names.namespace" . }}.svc.{{ .Values.clusterDomain }}"
     /opt/bitnami/scripts/solr/entrypoint.sh /opt/bitnami/scripts/solr/run.sh

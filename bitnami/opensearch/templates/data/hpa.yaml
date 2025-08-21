@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -9,11 +9,8 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "opensearch.data.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: data
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -29,24 +26,16 @@ spec:
     - type: Resource
       resource:
         name: cpu
-        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
-        targetAverageUtilization: {{ .Values.data.autoscaling.hpa.targetCPU }}
-        {{- else }}
         target:
           type: Utilization
           averageUtilization: {{ .Values.data.autoscaling.hpa.targetCPU }}
-        {{- end }}
     {{- end }}
     {{- if .Values.data.autoscaling.hpa.targetMemory }}
     - type: Resource
       resource:
         name: memory
-        {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
-        targetAverageUtilization: {{ .Values.data.autoscaling.hpa.targetMemory }}
-        {{- else }}
         target:
           type: Utilization
           averageUtilization: {{ .Values.data.autoscaling.hpa.targetMemory }}
-        {{- end }}
     {{- end }}
 {{- end }}

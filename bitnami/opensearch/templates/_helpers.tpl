@@ -1,5 +1,5 @@
 {{/*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -13,17 +13,38 @@ Return the proper OS image name
 {{- end -}}
 
 {{/*
-Return the proper Docker Image Registry Secret Names
-*/}}
-{{- define "opensearch.imagePullSecrets" -}}
-{{ include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.sysctlImage .Values.volumePermissions.image) "global" .Values.global) }}
-{{- end -}}
-
-{{/*
 Return the proper sysctl image name
 */}}
 {{- define "opensearch.sysctl.image" -}}
 {{ include "common.images.image" (dict "imageRoot" .Values.sysctlImage "global" .Values.global) }}
+{{- end -}}
+
+{{/*
+Return the proper image name (for the init container volume-permissions image)
+*/}}
+{{- define "opensearch.volumePermissions.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
+{{- end -}}
+
+{{/*
+Return the proper OpenSearch Dashboards image name
+*/}}
+{{- define "opensearch.dashboards.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.dashboards.image "global" .Values.global) }}
+{{- end -}}
+
+{{/*
+Return the proper OpenSearch Snapshots image name
+*/}}
+{{- define "opensearch.snapshots.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.snapshots.image "global" .Values.global) }}
+{{- end -}}
+
+{{/*
+Return the proper Docker Image Registry Secret Names
+*/}}
+{{- define "opensearch.imagePullSecrets" -}}
+{{ include "common.images.renderPullSecrets" (dict "images" (list .Values.image .Values.sysctlImage .Values.volumePermissions.image .Values.dashboards.image .Values.snapshots.image) "context" $) }}
 {{- end -}}
 
 {{/*
@@ -45,29 +66,105 @@ Return the proper sysctl image name
     runAsUser: 0
   {{- if .Values.sysctlImage.resources }}
   resources: {{- toYaml .Values.sysctlImage.resources | nindent 12 }}
+  {{- else if ne .Values.sysctlImage.resourcesPreset "none" }}
+  resources: {{- include "common.resources.preset" (dict "type" .Values.sysctlImage.resourcesPreset) | nindent 12 }}
   {{- end }}
 {{- end -}}
 
 {{/*
-Return the proper image name (for the init container volume-permissions image)
+Return the copy plugins init container definition
 */}}
-{{- define "opensearch.volumePermissions.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
+{{- define "opensearch.copy-default-plugins.initContainer" -}}
+{{- $block := index .context.Values .component }}
+- name: copy-default-plugins
+  image: {{ include "opensearch.image" .context }}
+  imagePullPolicy: {{ .context.Values.image.pullPolicy | quote }}
+  {{- if $block.containerSecurityContext.enabled }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" $block.containerSecurityContext "context" .context) | nindent 12 }}
+  {{- end }}
+  {{- if $block.resources }}
+  resources: {{- toYaml $block.resources | nindent 12 }}
+  {{- else if ne $block.resourcesPreset "none" }}
+  resources: {{- include "common.resources.preset" (dict "type" $block.resourcesPreset) | nindent 12 }}
+  {{- end }}
+  command:
+    - /bin/bash
+  args:
+    - -ec
+    - |
+        . /opt/bitnami/scripts/liblog.sh
+        . /opt/bitnami/scripts/libfs.sh
+        . /opt/bitnami/scripts/opensearch-env.sh
+
+        mkdir -p /emptydir/app-conf-dir /emptydir/app-plugins-dir
+        info "Copying directories to empty dir"
+
+        if ! is_dir_empty "$DB_DEFAULT_CONF_DIR"; then
+            info "Copying default configuration"
+            cp -nr --preserve=mode "$DB_DEFAULT_CONF_DIR"/* /emptydir/app-conf-dir
+        fi
+        if ! is_dir_empty "$DB_DEFAULT_PLUGINS_DIR"; then
+            info "Copying default plugins"
+            cp -nr "$DB_DEFAULT_PLUGINS_DIR"/* /emptydir/app-plugins-dir
+        fi
+
+        info "Copy operation completed"
+  volumeMounts:
+    - name: empty-dir
+      mountPath: /emptydir
 {{- end -}}
 
+{{/*
+Return the copy plugins init container definition
+*/}}
+{{- define "opensearch.dashboards.copy-default-plugins.initContainer" -}}
+- name: copy-default-plugins
+  image: {{ include "opensearch.dashboards.image" . }}
+  imagePullPolicy: {{ .Values.dashboards.image.pullPolicy | quote }}
+  {{- if .Values.dashboards.containerSecurityContext.enabled }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.dashboards.containerSecurityContext "context" $) | nindent 12 }}
+  {{- end }}
+  {{- if .Values.dashboards.resources }}
+  resources: {{- toYaml .Values.dashboards.resources | nindent 12 }}
+  {{- else if ne .Values.dashboards.resourcesPreset "none" }}
+  resources: {{- include "common.resources.preset" (dict "type" .Values.dashboards.resourcesPreset) | nindent 12 }}
+  {{- end }}
+  command:
+    - /bin/bash
+  args:
+    - -ec
+    - |
+        #!/bin/bash
+
+        . /opt/bitnami/scripts/libfs.sh
+        . /opt/bitnami/scripts/opensearch-dashboards-env.sh
+
+        if ! is_dir_empty "$SERVER_DEFAULT_PLUGINS_DIR"; then
+            cp -nr "$SERVER_DEFAULT_PLUGINS_DIR"/* /plugins
+        fi
+  volumeMounts:
+    - name: empty-dir
+      mountPath: /plugins
+      subPath: app-plugins-dir
+{{- end -}}
 
 {{/*
-Name for the Opensearch service
+Set Elasticsearch PVC.
+*/}}
+{{- define "opensearch.dashboards.pvc" -}}
+{{- .Values.dashboards.persistence.existingClaim | default (include "opensearch.dashboards.fullname" .) -}}
+{{- end -}}
+
+{{/*
+Name for the OpenSearch service
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-Required for the Kibana subchart to find Opensearch service.
 */}}
 {{- define "opensearch.service.name" -}}
-    {{- printf "%s" ( include "common.names.fullname" . )  | trunc 63 | trimSuffix "-" -}}
+{{- include "common.names.fullname" . | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
-Port number for the Opensearch service REST API port
-Required for the Kibana subchart to find Opensearch service.
+Port number for the OpenSearch service REST API port
 */}}
 {{- define "opensearch.service.ports.restAPI" -}}
 {{- printf "%d" (int .Values.service.ports.restAPI) -}}
@@ -91,11 +188,8 @@ Create a default master service name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "opensearch.master.servicename" -}}
-{{- if .Values.master.servicenameOverride -}}
-{{- .Values.master.servicenameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-hl" (include "opensearch.master.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- $name := coalesce .Values.master.service.headless.nameOverride .Values.master.servicenameOverride | default "" -}}
+{{- default (printf "%s-hl" (include "opensearch.master.fullname" .)) (tpl $name .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -116,11 +210,8 @@ Create a default coordinating service name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "opensearch.coordinating.servicename" -}}
-{{- if .Values.coordinating.servicenameOverride -}}
-{{- .Values.coordinating.servicenameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-hl" (include "opensearch.coordinating.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- $name := coalesce .Values.coordinating.service.headless.nameOverride .Values.coordinating.servicenameOverride | default "" -}}
+{{- default (printf "%s-hl" (include "opensearch.coordinating.fullname" .)) (tpl $name .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -141,11 +232,8 @@ Create a default data service name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "opensearch.data.servicename" -}}
-{{- if .Values.data.servicenameOverride -}}
-{{- .Values.data.servicenameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-hl" (include "opensearch.data.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- $name := coalesce .Values.data.service.headless.nameOverride .Values.data.servicenameOverride | default "" -}}
+{{- default (printf "%s-hl" (include "opensearch.data.fullname" .)) (tpl $name .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -166,18 +254,15 @@ Create a default ingest service name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "opensearch.ingest.servicename" -}}
-{{- if .Values.ingest.servicenameOverride -}}
-{{- .Values.ingest.servicenameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-hl" (include "opensearch.ingest.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- $name := coalesce .Values.ingest.service.headless.nameOverride .Values.ingest.servicenameOverride | default "" -}}
+{{- default (printf "%s-hl" (include "opensearch.ingest.fullname" .)) (tpl $name .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
-Returns true if at least one master-elegible node replica has been configured.
+Returns true if at least one master-eligible node replica has been configured.
 */}}
 {{- define "opensearch.master.enabled" -}}
-{{- if or .Values.master.autoscaling.enabled (gt (int .Values.master.replicaCount) 0) -}}
+{{- if or .Values.master.autoscaling.hpa.enabled (gt (int .Values.master.replicaCount) 0) -}}
     {{- true -}}
 {{- end -}}
 {{- end -}}
@@ -186,7 +271,7 @@ Returns true if at least one master-elegible node replica has been configured.
 Returns true if at least one coordinating-only node replica has been configured.
 */}}
 {{- define "opensearch.coordinating.enabled" -}}
-{{- if or .Values.coordinating.autoscaling.enabled (gt (int .Values.coordinating.replicaCount) 0) -}}
+{{- if or .Values.coordinating.autoscaling.hpa.enabled (gt (int .Values.coordinating.replicaCount) 0) -}}
     {{- true -}}
 {{- end -}}
 {{- end -}}
@@ -195,7 +280,7 @@ Returns true if at least one coordinating-only node replica has been configured.
 Returns true if at least one data-only node replica has been configured.
 */}}
 {{- define "opensearch.data.enabled" -}}
-{{- if or .Values.data.autoscaling.enabled (gt (int .Values.data.replicaCount) 0) -}}
+{{- if or .Values.data.autoscaling.hpa.enabled (gt (int .Values.data.replicaCount) 0) -}}
     {{- true -}}
 {{- end -}}
 {{- end -}}
@@ -204,7 +289,16 @@ Returns true if at least one data-only node replica has been configured.
 Returns true if at least one ingest-only node replica has been configured.
 */}}
 {{- define "opensearch.ingest.enabled" -}}
-{{- if and .Values.ingest.enabled (or .Values.ingest.autoscaling.enabled (gt (int .Values.ingest.replicaCount) 0)) -}}
+{{- if and .Values.ingest.enabled (or .Values.ingest.autoscaling.hpa.enabled (gt (int .Values.ingest.replicaCount) 0)) -}}
+    {{- true -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Returns true if at least one dashboards replica has been configured.
+*/}}
+{{- define "opensearch.dashboards.enabled" -}}
+{{- if and .Values.dashboards.enabled (or .Values.dashboards.autoscaling.hpa.enabled (gt (int .Values.dashboards.replicaCount) 0)) -}}
     {{- true -}}
 {{- end -}}
 {{- end -}}
@@ -247,19 +341,19 @@ Get the initialization scripts volume name.
 Get the initialization scripts ConfigMap name.
 */}}
 {{- define "opensearch.initScriptsCM" -}}
-{{- printf "%s" .Values.initScriptsCM -}}
+{{- print (tpl .Values.initScriptsCM .) -}}
 {{- end -}}
 
 {{/*
 Get the initialization scripts Secret name.
 */}}
 {{- define "opensearch.initScriptsSecret" -}}
-{{- printf "%s" .Values.initScriptsSecret -}}
+{{- print (tpl .Values.initScriptsSecret .) -}}
 {{- end -}}
 
 {{/*
- Create the name of the master service account to use
- */}}
+Create the name of the master service account to use
+*/}}
 {{- define "opensearch.master.serviceAccountName" -}}
 {{- if .Values.master.serviceAccount.create -}}
     {{ default (include "opensearch.master.fullname" .) .Values.master.serviceAccount.name }}
@@ -269,8 +363,8 @@ Get the initialization scripts Secret name.
 {{- end -}}
 
 {{/*
- Create the name of the coordinating-only service account to use
- */}}
+Create the name of the coordinating-only service account to use
+*/}}
 {{- define "opensearch.coordinating.serviceAccountName" -}}
 {{- if .Values.coordinating.serviceAccount.create -}}
     {{ default (include "opensearch.coordinating.fullname" .) .Values.coordinating.serviceAccount.name }}
@@ -280,8 +374,8 @@ Get the initialization scripts Secret name.
 {{- end -}}
 
 {{/*
- Create the name of the data service account to use
- */}}
+Create the name of the data service account to use
+*/}}
 {{- define "opensearch.data.serviceAccountName" -}}
 {{- if .Values.data.serviceAccount.create -}}
     {{ default (include "opensearch.data.fullname" .) .Values.data.serviceAccount.name }}
@@ -291,8 +385,8 @@ Get the initialization scripts Secret name.
 {{- end -}}
 
 {{/*
- Create the name of the ingest service account to use
- */}}
+Create the name of the ingest service account to use
+*/}}
 {{- define "opensearch.ingest.serviceAccountName" -}}
 {{- if .Values.ingest.serviceAccount.create -}}
     {{ default (include "opensearch.ingest.fullname" .) .Values.ingest.serviceAccount.name }}
@@ -302,27 +396,95 @@ Get the initialization scripts Secret name.
 {{- end -}}
 
 {{/*
-Return the opensearch TLS credentials secret for master nodes.
+Return the opensearch TLS credentials secret for typed nodes.
 */}}
-{{- define "opensearch.master.tlsSecretName" -}}
-{{- $secretName := .Values.security.tls.master.existingSecret -}}
+{{- define "opensearch.node.tlsSecretName" -}}
+{{- $secretName := index .context.Values.security.tls .nodeRole "existingSecret" -}}
 {{- if $secretName -}}
-    {{- printf "%s" (tpl $secretName $) -}}
+    {{- print (tpl $secretName .context) -}}
 {{- else -}}
-    {{- printf "%s-crt" (include "opensearch.master.fullname" .) -}}
+    {{- printf "%s-crt" (include (printf "opensearch.%s.fullname" .nodeRole) .context) -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Return the opensearch TLS credentials secret items for typed nodes.
+*/}}
+{{- define "opensearch.node.tlsSecretItems" -}}
+{{- $items := list }}
+{{- $items = append $items (dict "key" (include "opensearch.node.tlsSecretCertKey" (dict "nodeRole" .nodeRole "context" .context)) "path" "tls.crt") }}
+{{- $items = append $items (dict "key" (include "opensearch.node.tlsSecretKeyKey" (dict "nodeRole" .nodeRole "context" .context)) "path" "tls.key") }}
+{{- $items = append $items (dict "key" (include "opensearch.node.tlsSecretCAKey" (dict "nodeRole" .nodeRole "context" .context)) "path" "ca.crt") }}
+{{ $items | toYaml }}
+{{- end -}}
+
+{{/*
+Return the opensearch TLS credentials secret key of the certificate for typed nodes.
+*/}}
+{{- define "opensearch.node.tlsSecretCertKey" -}}
+{{- include "opensearch.tlsSecretKey" (dict "type" .nodeRole "secretKey" "certKey" "defaultKey" "tls.crt" "context" .context) -}}
+{{- end -}}
+
+{{/*
+Return the opensearch TLS credentials secret key of the certificates key for typed nodes.
+*/}}
+{{- define "opensearch.node.tlsSecretKeyKey" -}}
+{{- include "opensearch.tlsSecretKey" (dict "type" .nodeRole "secretKey" "keyKey" "defaultKey" "tls.key" "context" .context) -}}
+{{- end -}}
+
+{{/*
+Return the opensearch TLS credentials secret key of the ca certificate for typed nodes.
+*/}}
+{{- define "opensearch.node.tlsSecretCAKey" -}}
+{{- include "opensearch.tlsSecretKey" (dict "type" .nodeRole "secretKey" "caKey" "defaultKey" "ca.crt" "context" .context) -}}
 {{- end -}}
 
 {{/*
 Return the opensearch admin TLS credentials secret for all nodes.
 */}}
 {{- define "opensearch.admin.tlsSecretName" -}}
-{{- $secretName := .Values.security.tls.admin.existingSecret -}}
+{{- $secretName := .context.Values.security.tls.admin.existingSecret -}}
 {{- if $secretName -}}
-    {{- printf "%s" (tpl $secretName $) -}}
+    {{- print (tpl $secretName .context) -}}
 {{- else -}}
-    {{- printf "%s-admin-crt" (include "common.names.fullname" .) -}}
+    {{- printf "%s-admin-crt" (include "common.names.fullname" .context) -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Return the opensearch TLS credentials secret items for all nodes.
+*/}}
+{{- define "opensearch.admin.tlsSecretItems" -}}
+{{- $items := list }}
+{{- $items = append $items (dict "key" (include "opensearch.admin.tlsSecretCertKey" (dict "context" .context)) "path" "admin.crt") }}
+{{- $items = append $items (dict "key" (include "opensearch.admin.tlsSecretKeyKey" (dict "context" .context)) "path" "admin.key") }}
+{{ $items | toYaml }}
+{{- end -}}
+
+{{/*
+Return the opensearch TLS credentials secret key of the certificate for all nodes.
+*/}}
+{{- define "opensearch.admin.tlsSecretCertKey" -}}
+{{- include "opensearch.tlsSecretKey" (dict "type" "admin" "secretKey" "certKey" "defaultKey" "admin.crt" "context" .context) -}}
+{{- end -}}
+
+{{/*
+Return the opensearch TLS credentials secret key of the certificates key for all nodes.
+*/}}
+{{- define "opensearch.admin.tlsSecretKeyKey" -}}
+{{- include "opensearch.tlsSecretKey" (dict "type" "admin" "secretKey" "keyKey" "defaultKey" "admin.key" "context" .context) -}}
+{{- end -}}
+
+{{/*
+Return the opensearch TLS credentials secret key of the given type.
+*/}}
+{{- define "opensearch.tlsSecretKey" -}}
+{{- $secretConfig := index .context.Values.security.tls .type -}}
+{{- if $secretConfig.existingSecret }}
+{{- print (index $secretConfig .secretKey | default .defaultKey) }}
+{{- else }}
+{{- print .defaultKey }}
+{{- end }}
 {{- end -}}
 
 {{/*
@@ -344,10 +506,14 @@ Return true if an authentication credentials secret object should be created
 {{- end -}}
 
 {{/*
-Return the Opensearch authentication credentials secret name
+Return the OpenSearch authentication credentials secret name
 */}}
 {{- define "opensearch.secretName" -}}
-{{- default (include "common.names.fullname" .) .Values.security.existingSecret  -}}
+{{- if .Values.security.existingSecret -}}
+    {{- print (tpl .Values.security.existingSecret $) -}}
+{{- else -}}
+    {{- print (include "common.names.fullname" .) -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -360,44 +526,35 @@ Return true if a TLS password secret object should be created
 {{- end -}}
 
 {{/*
-Return the Opensearch TLS password secret name
+Return the OpenSearch TLS password secret name
 */}}
 {{- define "opensearch.tlsPasswordsSecret" -}}
-{{- default (printf "%s-tls-pass" (include "common.names.fullname" .)) .Values.security.tls.passwordsSecret -}}
+{{- if .Values.security.tls.passwordsSecret -}}
+    {{- print (tpl .Values.security.tls.passwordsSecret .) -}}
+{{- else -}}
+    {{- printf "%s-tls-pass" (include "common.names.fullname" .) -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
 Returns the name of the secret key containing the Keystore password
 */}}
 {{- define "opensearch.keystorePasswordKey" -}}
-{{- if .Values.security.tls.secretKeystoreKey -}}
-{{- printf "%s" .Values.security.tls.secretKeystoreKey -}}
-{{- else -}}
-{{- print "keystore-password"}}
+{{- default "keystore-password" (tpl .Values.security.tls.secretKeystoreKey .) -}}
 {{- end -}}
-{{- end -}}
-
 
 {{/*
 Returns the name of the secret key containing the Truststore password
 */}}
 {{- define "opensearch.truststorePasswordKey" -}}
-{{- if .Values.security.tls.secretTruststoreKey -}}
-{{- printf "%s" .Values.security.tls.secretTruststoreKey -}}
-{{- else -}}
-{{- print "truststore-password"}}
-{{- end -}}
+{{- default "truststore-password" (tpl .Values.security.tls.secretTruststoreKey .) -}}
 {{- end -}}
 
 {{/*
 Returns the name of the secret key containing the PEM key password
 */}}
 {{- define "opensearch.keyPasswordKey" -}}
-{{- if .Values.security.tls.secretKey -}}
-{{- printf "%s" .Values.security.tls.secretKey -}}
-{{- else -}}
-{{- print "key-password"}}
-{{- end -}}
+{{- default "key-password" (tpl .Values.security.tls.secretKey .) -}}
 {{- end -}}
 
 {{/*
@@ -419,10 +576,20 @@ Add environment variables to configure database values
 {{- end }}
 - name: OPENSEARCH_SECURITY_NODES_DN
   value: {{ coalesce .Values.security.tls.nodesDN ( join ";" $nodesDN ) }}
+{{- if .Values.security.tls.adminDN }}
 - name: OPENSEARCH_SECURITY_ADMIN_DN
-  value: {{ coalesce .Values.security.tls.adminDN "CN=admin;CN=admin" }}
+  value: {{ .Values.security.tls.adminDN }}
+{{- end }}
 - name: OPENSEARCH_ENABLE_SECURITY
   value: "true"
+{{- if .Values.usePasswordFiles }}
+- name: OPENSEARCH_PASSWORD_FILE
+  value: "/opt/bitnami/opensearch/secrets/opensearch-password"
+- name: OPENSEARCH_DASHBOARDS_PASSWORD_FILE
+  value: "/opt/bitnami/opensearch/secrets/opensearch-dashboards-password"
+- name: LOGSTASH_PASSWORD_FILE
+  value: "/opt/bitnami/opensearch/secrets/logstash-password"
+{{- else }}
 - name: OPENSEARCH_PASSWORD
   valueFrom:
     secretKeyRef:
@@ -438,6 +605,7 @@ Add environment variables to configure database values
     secretKeyRef:
         name: {{ include "opensearch.secretName" . }}
         key: logstash-password
+{{- end }}
 - name: OPENSEARCH_ENABLE_FIPS_MODE
   value: {{ .Values.security.fipsMode | quote }}
 - name: OPENSEARCH_TLS_VERIFICATION_MODE
@@ -454,25 +622,40 @@ Add environment variables to configure database values
   value: "/opt/bitnami/opensearch/config/certs/{{ .Values.security.tls.truststoreFilename }}"
 {{- end }}
 {{- if and (not .Values.security.tls.usePemCerts) (or .Values.security.tls.keystorePassword .Values.security.tls.passwordsSecret) }}
+{{- if .Values.usePasswordFiles }}
+- name: OPENSEARCH_KEYSTORE_PASSWORD_FILE
+  value: {{ printf "/opt/bitnami/opensearch/secrets/%s" (include "opensearch.keystorePasswordKey" .) }}
+{{- else }}
 - name: OPENSEARCH_KEYSTORE_PASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ include "opensearch.tlsPasswordsSecret" . }}
       key: {{ include "opensearch.keystorePasswordKey" . | quote }}
 {{- end }}
+{{- end }}
 {{- if and (not .Values.security.tls.usePemCerts) (or .Values.security.tls.truststorePassword .Values.security.tls.passwordsSecret) }}
+{{- if .Values.usePasswordFiles }}
+- name: OPENSEARCH_KEYSTORE_PASSWORD_FILE
+  value: {{ printf "/opt/bitnami/opensearch/secrets/%s" (include "opensearch.truststorePasswordKey" .) }}
+{{- else }}
 - name: OPENSEARCH_TRUSTSTORE_PASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ include "opensearch.tlsPasswordsSecret" . }}
       key: {{ include "opensearch.truststorePasswordKey" . | quote }}
 {{- end }}
+{{- end }}
 {{- if and .Values.security.tls.usePemCerts (or .Values.security.tls.keyPassword .Values.security.tls.passwordsSecret) }}
+{{- if .Values.usePasswordFiles }}
+- name: OPENSEARCH_KEY_PASSWORD_FILE
+  value: {{ printf "/opt/bitnami/opensearch/secrets/%s" (include "opensearch.keyPasswordKey" .) }}
+{{- else }}
 - name: OPENSEARCH_KEY_PASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ include "opensearch.tlsPasswordsSecret" . }}
       key: {{ include "opensearch.keyPasswordKey" . | quote }}
+{{- end }}
 {{- end }}
 {{- end -}}
 
@@ -489,47 +672,47 @@ Returns true if at least 1 existing secret was provided
 {{- end -}}
 {{- end -}}
 
-{{/* Validate values of Opensearch - Existing secret not provided for master nodes */}}
+{{/* Validate values of OpenSearch - Existing secret not provided for master nodes */}}
 {{- define "opensearch.validateValues.security.missingTlsSecrets.master" -}}
 {{- $masterSecret := (and (include "opensearch.master.enabled" .) (not .Values.security.tls.master.existingSecret)) -}}
 {{- if and .Values.security.enabled (include "opensearch.security.tlsSecretsProvided" .) $masterSecret -}}
 opensearch: security.tls.master.existingSecret
-    Missing secret containing the TLS certificates for the Opensearch master nodes.
+    Missing secret containing the TLS certificates for the OpenSearch master nodes.
     Provide the certificates using --set .security.tls.master.existingSecret="my-secret".
 {{- end -}}
 {{- end -}}
 
-{{/* Validate values of Opensearch - Existing secret not provided for coordinating-only nodes */}}
+{{/* Validate values of OpenSearch - Existing secret not provided for coordinating-only nodes */}}
 {{- define "opensearch.validateValues.security.missingTlsSecrets.coordinating" -}}
 {{- $coordinatingSecret := (and (include "opensearch.coordinating.enabled" .) (not .Values.security.tls.coordinating.existingSecret)) -}}
 {{- if and .Values.security.enabled (include "opensearch.security.tlsSecretsProvided" .) $coordinatingSecret -}}
 opensearch: security.tls.coordinating.existingSecret
-    Missing secret containing the TLS certificates for the Opensearch coordinating-only nodes.
+    Missing secret containing the TLS certificates for the OpenSearch coordinating-only nodes.
     Provide the certificates using --set .security.tls.coordinating.existingSecret="my-secret".
 {{- end -}}
 {{- end -}}
 
-{{/* Validate values of Opensearch - Existing secret not provided for data nodes */}}
+{{/* Validate values of OpenSearch - Existing secret not provided for data nodes */}}
 {{- define "opensearch.validateValues.security.missingTlsSecrets.data" -}}
 {{- $dataSecret := (and (include "opensearch.data.enabled" .) (not .Values.security.tls.data.existingSecret)) -}}
 {{- if and .Values.security.enabled (include "opensearch.security.tlsSecretsProvided" .) $dataSecret -}}
 opensearch: security.tls.data.existingSecret
-    Missing secret containing the TLS certificates for the Opensearch data nodes.
+    Missing secret containing the TLS certificates for the OpenSearch data nodes.
     Provide the certificates using --set .security.tls.data.existingSecret="my-secret".
 {{- end -}}
 {{- end -}}
 
-{{/* Validate values of Opensearch - Existing secret not provided for ingest nodes */}}
+{{/* Validate values of OpenSearch - Existing secret not provided for ingest nodes */}}
 {{- define "opensearch.validateValues.security.missingTlsSecrets.ingest" -}}
 {{- $ingestSecret := (and (include "opensearch.ingest.enabled" .) (not .Values.security.tls.ingest.existingSecret)) -}}
 {{- if and .Values.security.enabled (include "opensearch.security.tlsSecretsProvided" .) $ingestSecret -}}
 opensearch: security.tls.ingest.existingSecret
-    Missing secret containing the TLS certificates for the Opensearch ingest nodes.
+    Missing secret containing the TLS certificates for the OpenSearch ingest nodes.
     Provide the certificates using --set .security.tls.ingest.existingSecret="my-secret".
 {{- end -}}
 {{- end -}}
 
-{{/* Validate values of Opensearch - TLS enabled but no certificates provided */}}
+{{/* Validate values of OpenSearch - TLS enabled but no certificates provided */}}
 {{- define "opensearch.validateValues.security.tls" -}}
 {{- if and .Values.security.enabled (not .Values.security.tls.autoGenerated) (not (include "opensearch.security.tlsSecretsProvided" .)) -}}
 opensearch: security.tls
@@ -543,11 +726,11 @@ opensearch: security.tls
 {{- end -}}
 {{- end -}}
 
-{{/* Validate at least Opensearch one master node is configured */}}
+{{/* Validate at least OpenSearch one master node is configured */}}
 {{- define "opensearch.validateValues.master.replicas" -}}
 {{- if not (include "opensearch.master.enabled" .) -}}
 opensearch: master.replicas
-    Opensearch needs at least one master-elegible node to form a cluster.
+    OpenSearch needs at least one master-eligible node to form a cluster.
 {{- end -}}
 {{- end -}}
 
@@ -587,16 +770,16 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 */}}
 {{- define "opensearch.dashboards.fullname" -}}
 {{- $name := default "dashboards" .Values.dashboards.nameOverride -}}
-{{- if .Values.data.fullnameOverride -}}
-{{- .Values.data.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- if .Values.dashboards.fullnameOverride -}}
+{{- .Values.dashboards.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- printf "%s-%s" (include "common.names.fullname" .) $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
- Create the name of the dashboards service account to use
- */}}
+Create the name of the dashboards service account to use
+*/}}
 {{- define "opensearch.dashboards.serviceAccountName" -}}
 {{- if .Values.dashboards.serviceAccount.create -}}
     {{ default (include "opensearch.dashboards.fullname" .) .Values.dashboards.serviceAccount.name }}
@@ -610,23 +793,12 @@ Create a default Dashboards service name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "opensearch.dashboards.servicename" -}}
-{{- if .Values.dashboards.servicenameOverride -}}
-{{- .Values.dashboards.servicenameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s" (include "opensearch.dashboards.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- $name := coalesce .Values.dashboards.service.nameOverride .Values.dashboards.servicenameOverride | default "" -}}
+{{- default (include "opensearch.dashboards.fullname" .) (tpl $name .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
-Return the proper Opensearch Dashboards image name
-*/}}
-{{- define "opensearch.dashboards.image" -}}
-{{ include "common.images.image" (dict "imageRoot" .Values.dashboards.image "global" .Values.global) }}
-{{- end -}}
-
-
-{{/*
-Set Opensearch URL.
+Set OpenSearch URL.
 */}}
 {{- define "opensearch.url" -}}
 {{- $protocol := ternary "https" "http" .Values.security.tls.restEncryption -}}
@@ -639,7 +811,7 @@ Return the opensearch TLS credentials secret for Dashboards UI.
 {{- define "opensearch.dashboards.tlsSecretName" -}}
 {{- $secretName := .Values.dashboards.tls.existingSecret -}}
 {{- if $secretName -}}
-    {{- printf "%s" (tpl $secretName $) -}}
+    {{- print (tpl $secretName .) -}}
 {{- else -}}
     {{- printf "%s-crt" (include "opensearch.dashboards.fullname" .) -}}
 {{- end -}}
@@ -654,3 +826,36 @@ Return true if a TLS credentials secret object should be created
 {{- end -}}
 {{- end -}}
 
+{{/*
+Create a default fully qualified snapshots name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "opensearch.snapshots.fullname" -}}
+{{- $name := default "snapshots" .Values.snapshots.nameOverride -}}
+{{- if .Values.snapshots.fullnameOverride -}}
+{{- .Values.snapshots.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" (include "common.names.fullname" .) $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create a global mount path for snapshots volume based on repo path
+*/}}
+{{- define "opensearch.snapshots.mountPath" -}}
+{{- required "Value snapshotRepoPath must be set!" $.Values.snapshotRepoPath -}}
+{{- end -}}
+
+{{/*
+Create name for snapshot API repo data ConfigMap
+*/}}
+{{- define "opensearch.snapshots.repoDataConfigMap" -}}
+{{- printf "%s-repo-data" (include "opensearch.snapshots.fullname" $) -}}
+{{- end -}}
+
+{{/*
+Create name for snapshot API policy data ConfigMap
+*/}}
+{{- define "opensearch.snapshots.policyDataConfigMap" -}}
+{{- printf "%s-policy-data" (include "opensearch.snapshots.fullname" $) -}}
+{{- end -}}

@@ -2,6 +2,10 @@ CHART NAME: {{ .Chart.Name }}
 CHART VERSION: {{ .Chart.Version }}
 APP VERSION: {{ .Chart.AppVersion }}
 
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
 ** Please be patient while the chart is being deployed **
 
 {{- if .Values.diagnosticMode.enabled }}
@@ -25,26 +29,20 @@ Installed components:
   {{- if .Values.proxy.enabled }}
   * proxy
   {{- end }}
-  {{- if .Values.dataCoord.enabled }}
-  * data-coordinator
-  {{- end }}
-  {{- if .Values.indexCoord.enabled }}
-  * index-coordinator
-  {{- end }}
-  {{- if .Values.queryCoord.enabled }}
-  * query-coordinator
-  {{- end }}
-  {{- if .Values.rootCoord.enabled }}
-  * root-coordinator
+  {{- if .Values.coordinator.enabled }}
+  * coordinator
   {{- end }}
   {{- if .Values.dataNode.enabled }}
   * data-node
   {{- end }}
-  {{- if .Values.indexNode.enabled }}
-  * index-node
+  {{- if .Values.streamingNode.enabled }}
+  * streaming-node
   {{- end }}
   {{- if .Values.queryNode.enabled }}
   * query-node
+  {{- end }}
+  {{- if .Values.attu.enabled }}
+  * attu
   {{- end }}
 
 {{- if .Values.attu.enabled }}
@@ -58,7 +56,7 @@ Attu:
    echo "$CLUSTER_IP  {{ .Values.attu.ingress.hostname }}" | sudo tee -a /etc/hosts
 {{- else }}
 
-1. Get the gateway URL by running these commands:
+1. Get the Attu URL by running these commands:
 
 {{- if contains "NodePort" .Values.attu.service.type }}
     export NODE_PORT=$(kubectl get --namespace {{ include "common.names.namespace" . }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ template "milvus.attu.fullname" . }})
@@ -67,7 +65,7 @@ Attu:
 {{- else if contains "LoadBalancer" .Values.attu.service.type }}
      NOTE: It may take a few minutes for the LoadBalancer IP to be available.
            You can watch the status of by running 'kubectl get --namespace {{ include "common.names.namespace" . }} svc -w {{ template "milvus.attu.fullname" . }}
-    export SERVICE_IP=$(kubectl get svc --namespace {{ include "common.names.namespace" . }} {{ template "common.names.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    export SERVICE_IP=$(kubectl get svc --namespace {{ include "common.names.namespace" . }} {{ template "milvus.attu.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     echo http://$SERVICE_IP:{{ .Values.attu.service.ports.http }}
 {{- else if contains "ClusterIP" .Values.attu.service.type }}
     echo "Attu is available at http://127.0.0.1:{{ .Values.attu.service.ports.http }}"
@@ -79,7 +77,7 @@ Attu:
 {{- if .Values.proxy.enabled }}
 Proxy:
 
-1. Get the gateway URL by running these commands:
+1. Get the Proxy URL by running these commands:
 
 {{- if contains "NodePort" .Values.proxy.service.type }}
     export NODE_PORT=$(kubectl get --namespace {{ include "common.names.namespace" . }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ template "milvus.proxy.fullname" . }})
@@ -88,7 +86,7 @@ Proxy:
 {{- else if contains "LoadBalancer" .Values.proxy.service.type }}
      NOTE: It may take a few minutes for the LoadBalancer IP to be available.
            You can watch the status of by running 'kubectl get --namespace {{ include "common.names.namespace" . }} svc -w {{ template "milvus.proxy.fullname" . }}
-    export SERVICE_IP=$(kubectl get svc --namespace {{ include "common.names.namespace" . }} {{ template "common.names.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    export SERVICE_IP=$(kubectl get svc --namespace {{ include "common.names.namespace" . }} {{ template "milvus.proxy.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     echo grpc://$SERVICE_IP:{{ .Values.proxy.service.ports.grpc }}
 {{- else if contains "ClusterIP" .Values.proxy.service.type }}
     echo "Proxy is available at grpc://127.0.0.1:{{ .Values.proxy.service.ports.grpc }}"
@@ -113,3 +111,6 @@ Check the upstream Milvus documentation: https://milvus.io/docs
 {{- include "milvus.validateValues" . }}
 
 {{- end }}
+{{- include "common.warnings.resources" (dict "sections" (list "attu" "coordinator" "dataNode" "queryNode" "streamingNode" "initJob" "proxy" "waitContainer") "context" $) }}
+{{- include "common.warnings.modifiedImages" (dict "images" (list .Values.milvus.image .Values.initJob.image .Values.attu.image .Values.waitContainer.image) "context" $) }}
+{{- include "common.errors.insecureImages" (dict "images" (list .Values.milvus.image .Values.initJob.image .Values.attu.image .Values.waitContainer.image) "context" $) }}

@@ -2,6 +2,15 @@
   "phases": {
     "package": {
       "context": {
+        "credentials": [
+          {
+            "url": "{VIB_ENV_CHARTS_REGISTRY}",
+            "authn": {
+              "username": "{VIB_ENV_CHARTS_REGISTRY_USERNAME}",
+              "password": "{VIB_ENV_CHARTS_REGISTRY_PASSWORD}"
+            }
+          }
+        ],
         "resources": {
           "url": "{SHA_ARCHIVE}",
           "path": "/bitnami/apisix"
@@ -23,19 +32,13 @@
           "path": "/bitnami/apisix"
         },
         "target_platform": {
-          "target_platform_id": "{VIB_ENV_ALTERNATIVE_TARGET_PLATFORM}",
+          "target_platform_id": "{VIB_ENV_TARGET_PLATFORM}",
           "size": {
             "name": "S4"
           }
         }
       },
       "actions": [
-        {
-          "action_id": "health-check",
-          "params": {
-            "endpoint": "lb-apisix-data-plane-http"
-          }
-        },
         {
           "action_id": "goss",
           "params": {
@@ -57,12 +60,18 @@
             "resources": {
               "path": "/.vib/apisix/cypress"
             },
-            "endpoint": "lb-apisix-dashboard-http",
-            "app_protocol": "HTTP",
+            "endpoint": "lb-apisix-control-plane-https-admin-api",
+            "app_protocol": "HTTPS",
             "env": {
               "username": "vib-user",
               "password": "ComplicatedPassword123!4"
             }
+          }
+        },
+        {
+          "action_id": "kubescape",
+          "params": {
+            "threshold": {VIB_ENV_KUBESCAPE_SCORE_THRESHOLD}
           }
         }
       ]

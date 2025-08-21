@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -8,21 +8,12 @@ kind: Service
 metadata:
   name:  {{ include "jaeger.collector.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/part-of: jaeger
     app.kubernetes.io/component: collector
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end }}
-  {{- if or .Values.collector.service.annotations .Values.commonAnnotations }}
-  annotations:
-    {{- if .Values.collector.service.annotations }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.collector.service.annotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if .Values.commonAnnotations }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
-    {{- end }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.collector.service.metrics.annotations "context" $ ) | nindent 4 }}
+  {{- if or .Values.collector.service.annotations .Values.collector.service.metrics.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.collector.service.annotations .Values.collector.service.metrics.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
   type: {{ .Values.collector.service.type }}
@@ -45,22 +36,43 @@ spec:
   externalTrafficPolicy: {{ .Values.collector.service.externalTrafficPolicy | quote }}
   {{- end }}
   ports:
-    - name: grpc
-      port: {{ .Values.collector.service.ports.grpc }}
-      targetPort: {{ .Values.collector.containerPorts.grpc }}
-      {{- if and (or (eq .Values.collector.service.type "NodePort") (eq .Values.collector.service.type "LoadBalancer")) (not (empty .Values.collector.service.nodePorts.grpc)) }}
-      nodePort: {{ .Values.collector.service.nodePorts.grpc }}
+    {{- if has "otlp" .Values.collector.receivers }}
+    - name: otlp-grpc
+      port: {{ .Values.collector.service.ports.otlp.grpc }}
+      targetPort: {{ .Values.collector.containerPorts.otlp.grpc }}
+      {{- if and (or (eq .Values.collector.service.type "NodePort") (eq .Values.collector.service.type "LoadBalancer")) (not (empty .Values.collector.service.nodePorts.otlp.grpc)) }}
+      nodePort: {{ .Values.collector.service.nodePorts.otlp.grpc }}
       {{- else if eq .Values.collector.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    - name: binary
-      port: {{ .Values.collector.service.ports.binary }}
-      targetPort: {{ .Values.collector.containerPorts.binary }}
-      {{- if and (or (eq .Values.collector.service.type "NodePort") (eq .Values.collector.service.type "LoadBalancer")) (not (empty .Values.collector.service.nodePorts.binary)) }}
-      nodePort: {{ .Values.collector.service.nodePorts.binary }}
+    - name: otlp-http
+      port: {{ .Values.collector.service.ports.otlp.http }}
+      targetPort: {{ .Values.collector.containerPorts.otlp.http }}
+      {{- if and (or (eq .Values.collector.service.type "NodePort") (eq .Values.collector.service.type "LoadBalancer")) (not (empty .Values.collector.service.nodePorts.otlp.http)) }}
+      nodePort: {{ .Values.collector.service.nodePorts.otlp.http }}
       {{- else if eq .Values.collector.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
+    {{- end }}
+    {{- if has "jaeger" .Values.collector.receivers }}
+    - name: jaeger-grpc
+      port: {{ .Values.collector.service.ports.jaeger.grpc }}
+      targetPort: {{ .Values.collector.containerPorts.jaeger.grpc }}
+      {{- if and (or (eq .Values.collector.service.type "NodePort") (eq .Values.collector.service.type "LoadBalancer")) (not (empty .Values.collector.service.nodePorts.jaeger.grpc)) }}
+      nodePort: {{ .Values.collector.service.nodePorts.jaeger.grpc }}
+      {{- else if eq .Values.collector.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    - name: jaeger-http-thrift
+      port: {{ .Values.collector.service.ports.jaeger.thrift_http }}
+      targetPort: {{ .Values.collector.containerPorts.jaeger.thrift_http }}
+      {{- if and (or (eq .Values.collector.service.type "NodePort") (eq .Values.collector.service.type "LoadBalancer")) (not (empty .Values.collector.service.nodePorts.jaeger.thrift_http)) }}
+      nodePort: {{ .Values.collector.service.nodePorts.jaeger.thrift_http }}
+      {{- else if eq .Values.collector.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+    {{- end }}
+    {{- if has "zipkin" .Values.collector.receivers }}
     - name: zipkin
       port: {{ .Values.collector.service.ports.zipkin }}
       targetPort: {{ .Values.collector.containerPorts.zipkin }}
@@ -69,17 +81,19 @@ spec:
       {{- else if eq .Values.collector.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
-    - name: admin
-      port: {{ .Values.collector.service.ports.admin }}
-      targetPort: {{ .Values.collector.containerPorts.admin }}
-      {{- if and (or (eq .Values.collector.service.type "NodePort") (eq .Values.collector.service.type "LoadBalancer")) (not (empty .Values.collector.service.nodePorts.admin)) }}
-      nodePort: {{ .Values.collector.service.nodePorts.admin }}
+    {{- end }}
+    - name: metrics
+      port: {{ .Values.collector.service.ports.metrics }}
+      targetPort: {{ .Values.collector.containerPorts.metrics }}
+      {{- if and (or (eq .Values.collector.service.type "NodePort") (eq .Values.collector.service.type "LoadBalancer")) (not (empty .Values.collector.service.nodePorts.metrics)) }}
+      nodePort: {{ .Values.collector.service.nodePorts.metrics }}
       {{- else if eq .Values.collector.service.type "ClusterIP" }}
       nodePort: null
       {{- end }}
     {{- if .Values.collector.service.extraPorts }}
     {{- include "common.tplvalues.render" (dict "value" .Values.collector.service.extraPorts "context" $) | nindent 4 }}
     {{- end }}
-  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.collector.podLabels .Values.commonLabels ) "context" . ) }}
+  selector: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/part-of: jaeger
     app.kubernetes.io/component: collector

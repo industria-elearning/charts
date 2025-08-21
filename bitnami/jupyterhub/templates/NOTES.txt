@@ -2,6 +2,10 @@ CHART NAME: {{ .Chart.Name }}
 CHART VERSION: {{ .Chart.Version }}
 APP VERSION: {{ .Chart.AppVersion }}
 
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
 ** Please be patient while the chart is being deployed **
 
 {{- if .Values.proxy.ingress.enabled }}
@@ -17,7 +21,7 @@ APP VERSION: {{ .Chart.AppVersion }}
 
 1. Get the JupyterHub URL by running:
 
-{{- $port := coalesce .Values.proxy.service.public.ports.http .Values.proxy.service.public.port | toString }}
+{{- $port := .Values.proxy.service.public.ports.http | toString }}
 {{- if eq .Values.proxy.service.public.type "NodePort" }}
 
   export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ template "common.names.fullname" . }}-proxy-public)
@@ -61,3 +65,6 @@ APP VERSION: {{ .Chart.AppVersion }}
 
 {{- include "common.errors.upgrade.passwords.empty" (dict "validationErrors" $passwordValidationErrors "context" $) -}}
 {{- include "jupyterhub.validateValues" . }}
+{{- include "common.warnings.resources" (dict "sections" (list "hub" "imagePuller" "proxy" "singleuser") "context" $) }}
+{{- include "common.warnings.modifiedImages" (dict "images" (list .Values.hub.image .Values.proxy.image .Values.singleuser.image .Values.auxiliaryImage) "context" $) }}
+{{- include "common.errors.insecureImages" (dict "images" (list .Values.hub.image .Values.proxy.image .Values.singleuser.image .Values.auxiliaryImage) "context" $) }}

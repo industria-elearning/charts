@@ -1,5 +1,5 @@
 {{/*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -45,6 +45,11 @@ If release name contains chart name it will be used as a full name.
 {{- printf "%s-alertmanager" (include "kube-prometheus.name" .) -}}
 {{- end -}}
 
+{{/* Name suffixed with Thanos Ruler */}}
+{{- define "kube-prometheus.thanosRuler.name" -}}
+{{- printf "%s-thanos-ruler" (include "kube-prometheus.name" .) -}}
+{{- end -}}
+
 {{/* Fullname suffixed with operator */}}
 {{- define "kube-prometheus.operator.fullname" -}}
 {{- printf "%s-operator" (include "kube-prometheus.fullname" .) -}}
@@ -65,6 +70,11 @@ If release name contains chart name it will be used as a full name.
 {{- printf "%s-blackbox-exporter" (include "kube-prometheus.fullname" .) -}}
 {{- end -}}
 
+{{/* Fullname suffixed with Thanos Ruler */}}
+{{- define "kube-prometheus.thanosRuler.fullname" -}}
+{{- printf "%s-thanos-ruler" (include "kube-prometheus.fullname" .) -}}
+{{- end -}}
+
 {{/* Fullname suffixed with thanos */}}
 {{- define "kube-prometheus.thanos.fullname" -}}
 {{- printf "%s-thanos" (include "kube-prometheus.prometheus.fullname" .) -}}
@@ -79,7 +89,7 @@ If release name contains chart name it will be used as a full name.
 Labels for operator
 */}}
 {{- define "kube-prometheus.operator.labels" -}}
-{{- include "common.labels.standard" . }}
+{{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) }}
 app.kubernetes.io/component: operator
 {{- end -}}
 
@@ -87,7 +97,7 @@ app.kubernetes.io/component: operator
 Labels for prometheus
 */}}
 {{- define "kube-prometheus.prometheus.labels" -}}
-{{- include "common.labels.standard" . }}
+{{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) }}
 app.kubernetes.io/component: prometheus
 {{- end -}}
 
@@ -95,7 +105,7 @@ app.kubernetes.io/component: prometheus
 Labels for alertmanager
 */}}
 {{- define "kube-prometheus.alertmanager.labels" -}}
-{{- include "common.labels.standard" . }}
+{{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) }}
 app.kubernetes.io/component: alertmanager
 {{- end -}}
 
@@ -103,7 +113,33 @@ app.kubernetes.io/component: alertmanager
 Labels for blackbox-exporter
 */}}
 {{- define "kube-prometheus.blackboxExporter.labels" -}}
-{{- include "common.labels.standard" . }}
+{{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) }}
+app.kubernetes.io/component: blackbox-exporter
+{{- end -}}
+
+{{/*
+Labels for Thanos Ruler
+*/}}
+{{- define "kube-prometheus.thanosRuler.labels" -}}
+{{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) }}
+app.kubernetes.io/component: thanos-ruler
+{{- end -}}
+
+{{/*
+Labels for operator pods
+*/}}
+{{- define "kube-prometheus.operator.podLabels" -}}
+{{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.operator.podLabels .Values.commonLabels ) "context" . ) }}
+{{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) }}
+app.kubernetes.io/component: operator
+{{- end -}}
+
+{{/*
+Labels for blackbox-exporter pods
+*/}}
+{{- define "kube-prometheus.blackboxExporter.podLabels" -}}
+{{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.blackboxExporter.podLabels .Values.commonLabels ) "context" . ) }}
+{{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) }}
 app.kubernetes.io/component: blackbox-exporter
 {{- end -}}
 
@@ -111,7 +147,8 @@ app.kubernetes.io/component: blackbox-exporter
 matchLabels for operator
 */}}
 {{- define "kube-prometheus.operator.matchLabels" -}}
-{{- include "common.labels.matchLabels" . }}
+{{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.operator.podLabels .Values.commonLabels ) "context" . ) }}
+{{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) }}
 app.kubernetes.io/component: operator
 {{- end -}}
 
@@ -119,16 +156,46 @@ app.kubernetes.io/component: operator
 matchLabels for prometheus
 */}}
 {{- define "kube-prometheus.prometheus.matchLabels" -}}
-{{- include "common.labels.matchLabels" . }}
+{{- if or .Values.prometheus.podMetadata.labels .Values.commonLabels }}
+{{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.prometheus.podMetadata.labels .Values.commonLabels ) "context" . ) }}
+{{- include "common.tplvalues.render" ( dict "value" $podLabels "context" $ ) }}
+{{- end }}
+app.kubernetes.io/name: prometheus
 app.kubernetes.io/component: prometheus
+prometheus: {{ template "kube-prometheus.prometheus.fullname" . }}
 {{- end -}}
 
 {{/*
 matchLabels for alertmanager
 */}}
 {{- define "kube-prometheus.alertmanager.matchLabels" -}}
-{{- include "common.labels.matchLabels" . }}
+{{- if or .Values.alertmanager.podMetadata.labels .Values.commonLabels }}
+{{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.alertmanager.podMetadata.labels .Values.commonLabels ) "context" . ) }}
+{{- include "common.tplvalues.render" ( dict "value" $podLabels "context" $ ) }}
+{{- end }}
+app.kubernetes.io/name: alertmanager
 app.kubernetes.io/component: alertmanager
+alertmanager: {{ template "kube-prometheus.alertmanager.fullname" . }}
+{{- end -}}
+
+{{/*
+matchLabels for blackbox-exporter
+*/}}
+{{- define "kube-prometheus.blackboxExporter.matchLabels" -}}
+{{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.blackboxExporter.podLabels .Values.commonLabels ) "context" . ) }}
+{{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) }}
+app.kubernetes.io/component: blackbox-exporter
+{{- end -}}
+
+{{/*
+matchLabels for Thanos Ruler
+*/}}
+{{- define "kube-prometheus.thanosRuler.matchLabels" -}}
+{{- if or .Values.thanosRuler.podMetadata.labels .Values.commonLabels }}
+{{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.thanosRuler.podMetadata.labels .Values.commonLabels ) "context" . ) }}
+{{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) }}
+{{ end -}}
+app.kubernetes.io/component: thanos-ruler
 {{- end -}}
 
 {{/*
@@ -164,6 +231,13 @@ Return the proper Thanos Image name
 {{- end -}}
 
 {{/*
+Return the proper Thanos Ruler Image name
+*/}}
+{{- define "kube-prometheus.thanosRuler.image" -}}
+{{- include "common.images.image" (dict "imageRoot" .Values.thanosRuler.image "global" .Values.global) -}}
+{{- end -}}
+
+{{/*
 Return the proper Alertmanager Image name
 */}}
 {{- define "kube-prometheus.alertmanager.image" -}}
@@ -181,7 +255,7 @@ Return the proper Blackbox Exporter Image name
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "kube-prometheus.imagePullSecrets" -}}
-{{- include "common.images.pullSecrets" (dict "images" (list .Values.operator.image .Values.operator.prometheusConfigReloader.image .Values.prometheus.image .Values.prometheus.thanos.image .Values.alertmanager.image .Values.blackboxExporter.image) "global" .Values.global) -}}
+{{- include "common.images.renderPullSecrets" (dict "images" (list .Values.operator.image .Values.operator.prometheusConfigReloader.image .Values.prometheus.image .Values.prometheus.thanos.image .Values.alertmanager.image .Values.blackboxExporter.image .Values.thanosRuler.image) "context" $) -}}
 {{- end -}}
 
 {{/*
@@ -218,6 +292,17 @@ Create the name of the prometheus service account to use
 {{- end -}}
 
 {{/*
+Create the name of the Thanos Ruler service account to use
+*/}}
+{{- define "kube-prometheus.thanosRuler.serviceAccountName" -}}
+{{- if .Values.thanosRuler.serviceAccount.create -}}
+    {{- default (include "kube-prometheus.thanosRuler.fullname" .) .Values.thanosRuler.serviceAccount.name -}}
+{{- else -}}
+    {{- default "default" .Values.thanosRuler.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create the name of the alertmanager service account to use
 */}}
 {{- define "kube-prometheus.alertmanager.serviceAccountName" -}}
@@ -239,11 +324,35 @@ Return the etcd configuration configmap
 {{- end -}}
 {{- end -}}
 
+{{/* Validate values of Thanos - Ruler query configuration */}}
+{{- define "thanosRuler.validateValues.queryConfig" -}}
+{{ if and .Values.thanosRuler.enabled (not .Values.thanosRuler.queryConfig.existingSecret.name) (not .Values.thanosRuler.queryConfig.config) -}}
+Thanos: Ruler configuration
+    When enabling Thanos Ruler component, you must provide a valid query configuration.
+    There are two alternatives to provide it:
+      1) Through an existing secret whose details are specified by 'thanosRuler.queryConfig.existingSecret'
+      2) Through the 'thanosRuler.queryConfig.config' parameter
+    Configuration format is described under https://thanos.io/tip/components/rule.md/#query-api
+{{- end -}}
+{{- end -}}
+
+{{/* Validate there is no overlap between Prometheus and Thanos Ruler selectors */}}
+{{- define "thanosRuler.validateValues.ruleSelectors" -}}
+{{ if and .Values.thanosRuler.enabled .Values.alertmanager.enabled .Values.prometheus.enabled (deepEqual .Values.prometheus.ruleNamespaceSelector .Values.thanosRuler.ruleNamespaceSelector) (deepEqual .Values.prometheus.ruleSelector .Values.thanosRuler.ruleSelector) -}}
+Thanos: Ruler selectors
+    Both Thanos Ruler and Prometheus are configured with the same rule selectors
+    This will lead to both sending the same alerts to Alertmanager
+    Please review 'thanosRuler.ruleNamespaceSelector' and 'thanosRuler.ruleSelector'
+{{- end -}}
+{{- end -}}
+
 {{/*
 Compile all warnings into a single message, and call fail.
 */}}
 {{- define "kube-prometheus.validateValues" -}}
 {{- $messages := list -}}
+{{- $messages := append $messages (include "thanosRuler.validateValues.queryConfig" .) -}}
+{{- $messages := append $messages (include "thanosRuler.validateValues.ruleSelectors" .) -}}
 {{- $messages := without $messages "" -}}
 {{- $message := join "\n" $messages -}}
 

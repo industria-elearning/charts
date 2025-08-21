@@ -2,6 +2,15 @@
   "phases": {
     "package": {
       "context": {
+        "credentials": [
+          {
+            "url": "{VIB_ENV_CHARTS_REGISTRY}",
+            "authn": {
+              "username": "{VIB_ENV_CHARTS_REGISTRY_USERNAME}",
+              "password": "{VIB_ENV_CHARTS_REGISTRY_PASSWORD}"
+            }
+          }
+        ],
         "resources": {
           "url": "{SHA_ARCHIVE}",
           "path": "/bitnami/metrics-server"
@@ -31,13 +40,6 @@
       },
       "actions": [
         {
-          "action_id": "health-check",
-          "params": {
-            "endpoint": "lb-metrics-server-https",
-            "app_protocol": "HTTPS"
-          }
-        },
-        {
           "action_id": "goss",
           "params": {
             "resources": {
@@ -50,6 +52,12 @@
                 "workload": "deploy-metrics-server"
               }
             }
+          }
+        },
+        {
+          "action_id": "kubescape",
+          "params": {
+            "threshold": {VIB_ENV_KUBESCAPE_SCORE_THRESHOLD}
           }
         }
       ]

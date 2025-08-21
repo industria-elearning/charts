@@ -2,8 +2,5 @@ aggregator:
   enabled: true
 forwarder:
   enabled: true
-  service:
-    type: LoadBalancer
-    ports:
-      http:
-        port: 80
+varlog:
+  readonly: false

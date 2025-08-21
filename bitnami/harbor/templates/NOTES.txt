@@ -2,6 +2,10 @@ CHART NAME: {{ .Chart.Name }}
 CHART VERSION: {{ .Chart.Version }}
 APP VERSION: {{ .Chart.AppVersion }}
 
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
 ** Please be patient while the chart is being deployed **
 
 1. Get the Harbor URL:
@@ -48,3 +52,6 @@ APP VERSION: {{ .Chart.AppVersion }}
 
 {{ include "harbor.validateValues" . }}
 {{ include "harbor.checkRollingTags" . }}
+{{- include "common.warnings.resources" (dict "sections" (list "core" "exporter" "jobservice" "nginx" "portal" "registry.controller" "registry.server" "trivy" "volumePermissions") "context" $) }}
+{{- include "common.warnings.modifiedImages" (dict "images" (list .Values.volumePermissions.image .Values.nginx.image .Values.portal.image .Values.core.image .Values.jobservice.image .Values.registry.server.image .Values.registry.controller.image .Values.trivy.image .Values.exporter.image) "context" $) }}
+{{- include "common.errors.insecureImages" (dict "images" (list .Values.volumePermissions.image .Values.nginx.image .Values.portal.image .Values.core.image .Values.jobservice.image .Values.registry.server.image .Values.registry.controller.image .Values.trivy.image .Values.exporter.image) "context" $) }}

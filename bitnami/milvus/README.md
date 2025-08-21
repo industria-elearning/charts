@@ -1,6 +1,6 @@
 <!--- app-name: Milvus -->
 
-# Milvus packaged by Bitnami
+# Bitnami package for Milvus
 
 Milvus is a cloud-native, open-source vector database solution for AI applications and similarity search. Features high scalability, hibrid search and unified lambda structure.
 
@@ -14,22 +14,29 @@ Trademarks: This software listing is packaged by Bitnami. The respective tradema
 helm install my-release oci://registry-1.docker.io/bitnamicharts/milvus
 ```
 
+Looking to use Milvus in production? Try [VMware Tanzu Application Catalog](https://bitnami.com/enterprise), the commercial edition of the Bitnami catalog.
+
+## ⚠️ Important Notice: Upcoming changes to the Bitnami Catalog
+
+Beginning August 28th, 2025, Bitnami will evolve its public catalog to offer a curated set of hardened, security-focused images under the new [Bitnami Secure Images initiative](https://news.broadcom.com/app-dev/broadcom-introduces-bitnami-secure-images-for-production-ready-containerized-applications). As part of this transition:
+
+- Granting community users access for the first time to security-optimized versions of popular container images.
+- Bitnami will begin deprecating support for non-hardened, Debian-based software images in its free tier and will gradually remove non-latest tags from the public catalog. As a result, community users will have access to a reduced number of hardened images. These images are published only under the “latest” tag and are intended for development purposes
+- Starting August 28th, over two weeks, all existing container images, including older or versioned tags (e.g., 2.50.0, 10.6), will be migrated from the public catalog (docker.io/bitnami) to the “Bitnami Legacy” repository (docker.io/bitnamilegacy), where they will no longer receive updates.
+- For production workloads and long-term support, users are encouraged to adopt Bitnami Secure Images, which include hardened containers, smaller attack surfaces, CVE transparency (via VEX/KEV), SBOMs, and enterprise support.
+
+These changes aim to improve the security posture of all Bitnami users by promoting best practices for software supply chain integrity and up-to-date deployments. For more details, visit the [Bitnami Secure Images announcement](https://github.com/bitnami/containers/issues/83267).
+
 ## Introduction
 
 Bitnami charts for Helm are carefully engineered, actively maintained and are the quickest and easiest way to deploy containers on a Kubernetes cluster that are ready to handle production workloads.
 
 This chart bootstraps a [Milvus](https://github.com/grafana/loki) Deployment in a [Kubernetes](https://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
 
-Bitnami charts can be used with [Kubeapps](https://kubeapps.dev/) for deployment and management of Helm Charts in clusters.
-
-[Learn more about the default configuration of the chart](https://docs.bitnami.com/kubernetes/infrastructure/milvus/get-started/).
-
-Looking to use Milvus in production? Try [VMware Application Catalog](https://bitnami.com/enterprise), the enterprise edition of Bitnami Application Catalog.
-
 ## Prerequisites
 
-- Kubernetes 1.19+
-- Helm 3.2.0+
+- Kubernetes 1.23+
+- Helm 3.8.0+
 - PV provisioner support in the underlying infrastructure
 
 ## Installing the Chart
@@ -37,734 +44,591 @@ Looking to use Milvus in production? Try [VMware Application Catalog](https://bi
 To install the chart with the release name `my-release`:
 
 ```console
-helm install my-release oci://registry-1.docker.io/bitnamicharts/milvus
+helm install my-release oci://REGISTRY_NAME/REPOSITORY_NAME/milvus
 ```
+
+> Note: You need to substitute the placeholders `REGISTRY_NAME` and `REPOSITORY_NAME` with a reference to your Helm chart registry and repository. For example, in the case of Bitnami, you need to use `REGISTRY_NAME=registry-1.docker.io` and `REPOSITORY_NAME=bitnamicharts`.
 
 The command deploys milvus on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
 
 > **Tip**: List all releases using `helm list`
 
-## Uninstalling the Chart
+## Configuration and installation details
 
-To uninstall/delete the `my-release` deployment:
+### Resource requests and limits
 
-```console
-helm delete my-release
+Bitnami charts allow setting resource requests and limits for all containers inside the chart deployment. These are inside the `resources` value (check parameter table). Setting requests is essential for production workloads and these should be adapted to your specific use case.
+
+To make this process easier, the chart contains the `resourcesPreset` values, which automatically sets the `resources` section according to different presets. Check these presets in [the bitnami/common chart](https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15). However, in production workloads using `resourcesPreset` is discouraged as it may not fully adapt to your specific needs. Find more information on container resource management in the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/).
+
+### Prometheus metrics
+
+This chart can be integrated with Prometheus by setting `*.metrics.enabled` (under the `coordinator`, `dataNode`, `queryNode`, `streamingNode` and `proxy` sections) to true. This will expose the Milvus native Prometheus port in both the containers and services. The services will also have the necessary annotations to be automatically scraped by Prometheus.
+
+#### Prometheus requirements
+
+It is necessary to have a working installation of Prometheus or Prometheus Operator for the integration to work. Install the [Bitnami Prometheus helm chart](https://github.com/bitnami/charts/tree/main/bitnami/prometheus) or the [Bitnami Kube Prometheus helm chart](https://github.com/bitnami/charts/tree/main/bitnami/kube-prometheus) to easily have a working Prometheus in your cluster.
+
+#### Integration with Prometheus Operator
+
+The chart can deploy `ServiceMonitor` objects for integration with Prometheus Operator installations. To do so, set the value `*.metrics.serviceMonitor.enabled=true` (under the `coordinator`, `dataNode`, `queryNode`, `streamingNode` and `proxy` sections). Ensure that the Prometheus Operator `CustomResourceDefinitions` are installed in the cluster or it will fail with the following error:
+
+```text
+no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
 ```
 
-The command removes all the Kubernetes components associated with the chart and deletes the release.
+Install the [Bitnami Kube Prometheus helm chart](https://github.com/bitnami/charts/tree/main/bitnami/kube-prometheus) for having the necessary CRDs and the Prometheus Operator.
+
+### [Rolling VS Immutable tags](https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-understand-rolling-tags-containers-index.html)
+
+It is strongly recommended to use immutable tags in a production environment. This ensures your deployment does not change automatically if the same tag is updated with a different image.
+
+Bitnami will release a new chart updating its containers if a new version of the main container, significant changes, or critical vulnerabilities exist.
+
+### Milvus configuration
+
+The Milvus configuration file `milvus.yaml` is shared across the different components: `coordinator`, `dataNode`, `queryNode` and `streamingNode`. This is set in the `milvus.defaultConfig` value. This configuration can be extended with extra settings using the `milvus.extraConfig` value. For specific component configuration edit the `extraConfig` section inside each of the previously mentioned components. Check the official [Milvis documentation](https://milvus.io/docs) for the list of possible configurations.
+
+### Backup and restore
+
+To back up and restore Helm chart deployments on Kubernetes, you need to back up the persistent volumes from the source deployment and attach them to a new deployment using [Velero](https://velero.io/), a Kubernetes backup/restore tool. Find the instructions for using Velero in [this guide](https://techdocs.broadcom.com/us/en/vmware-tanzu/application-catalog/tanzu-application-catalog/services/tac-doc/apps-tutorials-backup-restore-deployments-velero-index.html).
+
+### Additional environment variables
+
+In case you want to add extra environment variables (useful for advanced operations like custom init scripts), you can use the `extraEnvVars` property inside each of the subsections: `rootCoord`, `dataCoord`, `indexCoord`, `dataNode`, `streamingNode`, `attu` and `queryNode`.
+
+```yaml
+dataCoord:
+  extraEnvVars:
+    - name: LOG_LEVEL
+      value: error
+
+rootCoord:
+  extraEnvVars:
+    - name: LOG_LEVEL
+      value: error
+
+indexCoord:
+  extraEnvVars:
+    - name: LOG_LEVEL
+      value: error
+
+dataNode:
+  extraEnvVars:
+    - name: LOG_LEVEL
+      value: error
+
+streamingNode:
+  extraEnvVars:
+    - name: LOG_LEVEL
+      value: error
+
+queryNode:
+  extraEnvVars:
+    - name: LOG_LEVEL
+      value: error
+```
+
+Alternatively, you can use a ConfigMap or a Secret with the environment variables. To do so, use the `extraEnvVarsCM` or the `extraEnvVarsSecret` values.
+
+### Sidecars
+
+If additional containers are needed in the same pod as milvus (such as additional metrics or logging exporters), they can be defined using the `sidecars` parameter inside each of the subsections: `rootCoord`, `dataCoord`, `indexCoord`, `dataNode`, `streamingNode`, `attu` and `queryNode` .
+
+```yaml
+sidecars:
+- name: your-image-name
+  image: your-image
+  imagePullPolicy: Always
+  ports:
+  - name: portname
+    containerPort: 1234
+```
+
+If these sidecars export extra ports, extra port definitions can be added using the `service.extraPorts` parameter (where available), as shown in the example below:
+
+```yaml
+service:
+  extraPorts:
+  - name: extraPort
+    port: 11311
+    targetPort: 11311
+```
+
+> NOTE: This Helm chart already includes sidecar containers for the Prometheus exporters (where applicable). These can be activated by adding the `--enable-metrics=true` parameter at deployment time. The `sidecars` parameter should therefore only be used for any extra sidecar containers.
+
+If additional init containers are needed in the same pod, they can be defined using the `initContainers` parameter. Here is an example:
+
+```yaml
+initContainers:
+  - name: your-image-name
+    image: your-image
+    imagePullPolicy: Always
+    ports:
+      - name: portname
+        containerPort: 1234
+```
+
+Learn more about [sidecar containers](https://kubernetes.io/docs/concepts/workloads/pods/) and [init containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/).
+
+### Update credentials
+
+Bitnami charts configure credentials at first boot. Any further change in the secrets or credentials require manual intervention. Follow these instructions:
+
+- Update the user password following [the upstream documentation](https://milvus.io/docs/authenticate.md#Update-user-password)
+- Update the password secret with the new values (replace the SECRET_NAME, PASSWORD and ROOT_PASSWORD placeholders)
+
+```shell
+kubectl create secret generic SECRET_NAME --from-literal=password=PASSWORD --from-literal=root-password=ROOT_PASSWORD --dry-run -o yaml | kubectl apply -f -
+```
+
+### Pod affinity
+
+This chart allows you to set your custom affinity using the `affinity` parameter. Find more information about Pod affinity in the [kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).
+
+As an alternative, use one of the preset configurations for pod affinity, pod anti-affinity, and node affinity available at the [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common#affinities) chart. To do so, set the `podAffinityPreset`, `podAntiAffinityPreset`, or `nodeAffinityPreset` parameters inside each of the subsections: `rootCoord`, `dataCoord`, `indexCoord`, `dataNode`, `streamingNode`, `attu` and `queryNode`.
+
+### External kafka support
+
+You may want to have Milvus connect to an external kafka rather than installing one inside your cluster. Typical reasons for this are to use a managed database service, or to share a common database server for all your applications. To achieve this, the chart allows you to specify credentials for an external database with the [`externalKafka` parameter](#parameters). You should also disable the etcd installation with the `etcd.enabled` option. Here is an example:
+
+```yaml
+kafka:
+  enabled: false
+externalKafka:
+  hosts:
+    - externalhost
+```
+
+### External etcd support
+
+You may want to have Milvus connect to an external etcd rather than installing one inside your cluster. Typical reasons for this are to use a managed database service, or to share a common database server for all your applications. To achieve this, the chart allows you to specify credentials for an external database with the [`externalEtcd` parameter](#parameters). You should also disable the etcd installation with the `etcd.enabled` option. Here is an example:
+
+```yaml
+etcd:
+  enabled: false
+externalEtcd:
+  hosts:
+    - externalhost
+```
+
+### External S3 support
+
+You may want to have Milvus connect to an external storage streaming rather than installing MiniIO(TM) inside your cluster. To achieve this, the chart allows you to specify credentials for an external storage streaming with the [`externalS3` parameter](#parameters). You should also disable the MinIO(TM) installation with the `minio.enabled` option. Here is an example:
+
+```console
+minio.enabled=false
+externalS3.host=myexternalhost
+externalS3.accessKeyID=accesskey
+externalS3.accessKeySecret=secret
+```
+
+### Ingress
+
+This chart provides support for Ingress resources. If you have an ingress controller installed on your cluster, such as [nginx-ingress-controller](https://github.com/bitnami/charts/tree/main/bitnami/nginx-ingress-controller) or [contour](https://github.com/bitnami/charts/tree/main/bitnami/contour) you can utilize the ingress controller to serve your application.To enable Ingress integration, set `attu.ingress.enabled` to `true`.
+
+The most common scenario is to have one host name mapped to the deployment. In this case, the `attu.ingress.hostname` property can be used to set the host name. The `attu.ingress.tls` parameter can be used to add the TLS configuration for this host.
+
+However, it is also possible to have more than one host. To facilitate this, the `attu.ingress.extraHosts` parameter (if available) can be set with the host names specified as an array. The `attu.ingress.extraTLS` parameter (if available) can also be used to add the TLS configuration for extra hosts.
+
+> NOTE: For each host specified in the `attu.ingress.extraHosts` parameter, it is necessary to set a name, path, and any annotations that the Ingress controller should know about. Not all annotations are supported by all Ingress controllers, but [this annotation reference document](https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/annotations.md) lists the annotations supported by many popular Ingress controllers.
+
+Adding the TLS parameter (where available) will cause the chart to generate HTTPS URLs, and the  application will be available on port 443. The actual TLS secrets do not have to be generated by this chart. However, if TLS is enabled, the Ingress record will not work until the TLS secret exists.
+
+[Learn more about Ingress controllers](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/).
+
+### Securing traffic using TLS
+
+This chart facilitates the creation of TLS secrets for use with the Ingress controller (although this is not mandatory). There are several common use cases:
+
+- Generate certificate secrets based on chart parameters.
+- Enable externally generated certificates.
+- Manage application certificates via an external service (like [cert-manager](https://github.com/jetstack/cert-manager/)).
+- Create self-signed certificates within the chart (if supported).
+
+In the first two cases, a certificate and a key are needed. Files are expected in `.pem` format.
+
+Here is an example of a certificate file:
+
+> NOTE: There may be more than one certificate if there is a certificate chain.
+
+```text
+-----BEGIN CERTIFICATE-----
+MIID6TCCAtGgAwIBAgIJAIaCwivkeB5EMA0GCSqGSIb3DQEBCwUAMFYxCzAJBgNV
+...
+jScrvkiBO65F46KioCL9h5tDvomdU1aqpI/CBzhvZn1c0ZTf87tGQR8NK7v7
+-----END CERTIFICATE-----
+```
+
+Here is an example of a certificate key:
+
+```text
+-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEAvLYcyu8f3skuRyUgeeNpeDvYBCDcgq+LsWap6zbX5f8oLqp4
+...
+wrj2wDbCDCFmfqnSJ+dKI3vFLlEz44sAV8jX/kd4Y6ZTQhlLbYc=
+-----END RSA PRIVATE KEY-----
+```
+
+- If using Helm to manage the certificates based on the parameters, copy these values into the `certificate` and `key` values for a given `*.ingress.secrets` entry.
+- If managing TLS secrets separately, it is necessary to create a TLS secret with name `INGRESS_HOSTNAME-tls` (where INGRESS_HOSTNAME is a placeholder to be replaced with the hostname you set using the `*.ingress.hostname` parameter).
+- If your cluster has a [cert-manager](https://github.com/jetstack/cert-manager) add-on to automate the management and issuance of TLS certificates, add to `*.ingress.annotations` the [corresponding ones](https://cert-manager.io/docs/usage/ingress/#supported-annotations) for cert-manager.
+- If using self-signed certificates created by Helm, set both `*.ingress.tls` and `*.ingress.selfSigned` to `true`.
 
 ## Parameters
 
 ### Global parameters
 
-| Name                      | Description                                     | Value |
-| ------------------------- | ----------------------------------------------- | ----- |
-| `global.imageRegistry`    | Global Docker image registry                    | `""`  |
-| `global.imagePullSecrets` | Global Docker registry secret names as an array | `[]`  |
-| `global.storageClass`     | Global StorageClass for Persistent Volume(s)    | `""`  |
+| Name                                                  | Description                                                                                                                                                                                                                                                                                                                                                         | Value   |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `global.imageRegistry`                                | Global Docker image registry                                                                                                                                                                                                                                                                                                                                        | `""`    |
+| `global.imagePullSecrets`                             | Global Docker registry secret names as an array                                                                                                                                                                                                                                                                                                                     | `[]`    |
+| `global.defaultStorageClass`                          | Global default StorageClass for Persistent Volume(s)                                                                                                                                                                                                                                                                                                                | `""`    |
+| `global.security.allowInsecureImages`                 | Allows skipping image verification                                                                                                                                                                                                                                                                                                                                  | `false` |
+| `global.compatibility.openshift.adaptSecurityContext` | Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation) | `auto`  |
 
 ### Common parameters
 
-| Name                     | Description                                                                             | Value           |
-| ------------------------ | --------------------------------------------------------------------------------------- | --------------- |
-| `kubeVersion`            | Override Kubernetes version                                                             | `""`            |
-| `nameOverride`           | String to partially override common.names.fullname                                      | `""`            |
-| `fullnameOverride`       | String to fully override common.names.fullname                                          | `""`            |
-| `commonLabels`           | Labels to add to all deployed objects                                                   | `{}`            |
-| `commonAnnotations`      | Annotations to add to all deployed objects                                              | `{}`            |
-| `clusterDomain`          | Kubernetes cluster domain name                                                          | `cluster.local` |
-| `extraDeploy`            | Array of extra objects to deploy with the release                                       | `[]`            |
-| `diagnosticMode.enabled` | Enable diagnostic mode (all probes will be disabled and the command will be overridden) | `false`         |
-| `diagnosticMode.command` | Command to override all containers in the deployments/statefulsets                      | `["sleep"]`     |
-| `diagnosticMode.args`    | Args to override all containers in the deployments/statefulsets                         | `["infinity"]`  |
+| Name                     | Description                                                                               | Value           |
+| ------------------------ | ----------------------------------------------------------------------------------------- | --------------- |
+| `kubeVersion`            | Override Kubernetes version                                                               | `""`            |
+| `apiVersions`            | Override Kubernetes API versions reported by .Capabilities                                | `[]`            |
+| `nameOverride`           | String to partially override common.names.fullname                                        | `""`            |
+| `fullnameOverride`       | String to fully override common.names.fullname                                            | `""`            |
+| `commonLabels`           | Labels to add to all deployed objects                                                     | `{}`            |
+| `commonAnnotations`      | Annotations to add to all deployed objects                                                | `{}`            |
+| `clusterDomain`          | Kubernetes cluster domain name                                                            | `cluster.local` |
+| `extraDeploy`            | Array of extra objects to deploy with the release                                         | `[]`            |
+| `enableServiceLinks`     | Whether information about services should be injected into all pods' environment variable | `false`         |
+| `usePasswordFiles`       | Mount credentials as files instead of using environment variables                         | `true`          |
+| `diagnosticMode.enabled` | Enable diagnostic mode (all probes will be disabled and the command will be overridden)   | `false`         |
+| `diagnosticMode.command` | Command to override all containers in the deployments/statefulsets                        | `["sleep"]`     |
+| `diagnosticMode.args`    | Args to override all containers in the deployments/statefulsets                           | `["infinity"]`  |
 
 ### Common Milvus Parameters
 
-| Name                                                        | Description                                                                                                                                         | Value                  |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `milvus.image.registry`                                     | Milvus image registry                                                                                                                               | `docker.io`            |
-| `milvus.image.repository`                                   | Milvus image repository                                                                                                                             | `bitnami/milvus`       |
-| `milvus.image.tag`                                          | Milvus image tag (immutable tags are recommended)                                                                                                   | `2.2.12-debian-11-r0`  |
-| `milvus.image.digest`                                       | Milvus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                                              | `""`                   |
-| `milvus.image.pullPolicy`                                   | Milvus image pull policy                                                                                                                            | `IfNotPresent`         |
-| `milvus.image.pullSecrets`                                  | Milvus image pull secrets                                                                                                                           | `[]`                   |
-| `milvus.image.debug`                                        | Enable debug mode                                                                                                                                   | `false`                |
-| `milvus.auth.enabled`                                       | enable Milvus authentication                                                                                                                        | `false`                |
-| `milvus.auth.username`                                      | Milvus username                                                                                                                                     | `user`                 |
-| `milvus.auth.password`                                      | Milvus username password                                                                                                                            | `""`                   |
-| `milvus.auth.rootPassword`                                  | Milvus root password                                                                                                                                | `""`                   |
-| `milvus.auth.existingSecret`                                | Name of a secret containing the Milvus password                                                                                                     | `""`                   |
-| `milvus.defaultConfig`                                      | Milvus components default configuration                                                                                                             | `""`                   |
-| `milvus.extraConfig`                                        | Extra configuration parameters                                                                                                                      | `{}`                   |
-| `milvus.existingConfigMap`                                  | name of a ConfigMap with existing configuration for the default configuration                                                                       | `""`                   |
-| `milvus.extraConfigExistingConfigMap`                       | name of a ConfigMap with existing configuration for the Dashboard                                                                                   | `""`                   |
-| `initJob.forceRun`                                          | Force the run of the credential job                                                                                                                 | `false`                |
-| `initJob.image.registry`                                    | PyMilvus image registry                                                                                                                             | `docker.io`            |
-| `initJob.image.repository`                                  | PyMilvus image repository                                                                                                                           | `bitnami/pymilvus`     |
-| `initJob.image.tag`                                         | PyMilvus image tag (immutable tags are recommended)                                                                                                 | `2.2.13-debian-11-r15` |
-| `initJob.image.digest`                                      | PyMilvus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended) | `""`                   |
-| `initJob.image.pullPolicy`                                  | PyMilvus image pull policy                                                                                                                          | `IfNotPresent`         |
-| `initJob.image.pullSecrets`                                 | PyMilvus image pull secrets                                                                                                                         | `[]`                   |
-| `initJob.enableDefaultInitContainers`                       | Deploy default init containers                                                                                                                      | `true`                 |
-| `initJob.backoffLimit`                                      | set backoff limit of the job                                                                                                                        | `10`                   |
-| `initJob.extraVolumes`                                      | Optionally specify extra list of additional volumes for the credential init job                                                                     | `[]`                   |
-| `initJob.extraCommands`                                     | Extra commands to pass to the generation job                                                                                                        | `""`                   |
-| `initJob.containerSecurityContext.enabled`                  | Enabled credential init job containers' Security Context                                                                                            | `true`                 |
-| `initJob.containerSecurityContext.runAsUser`                | Set credential init job containers' Security Context runAsUser                                                                                      | `1001`                 |
-| `initJob.containerSecurityContext.runAsNonRoot`             | Set credential init job containers' Security Context runAsNonRoot                                                                                   | `true`                 |
-| `initJob.containerSecurityContext.readOnlyRootFilesystem`   | Set credential init job containers' Security Context runAsNonRoot                                                                                   | `true`                 |
-| `initJob.containerSecurityContext.allowPrivilegeEscalation` | Set container's privilege escalation                                                                                                                | `false`                |
-| `initJob.containerSecurityContext.capabilities.drop`        | Set container's Security Context runAsNonRoot                                                                                                       | `["ALL"]`              |
-| `initJob.podSecurityContext.enabled`                        | Enabled credential init job pods' Security Context                                                                                                  | `true`                 |
-| `initJob.podSecurityContext.fsGroup`                        | Set credential init job pod's Security Context fsGroup                                                                                              | `1001`                 |
-| `initJob.podSecurityContext.seccompProfile.type`            | Set container's Security Context seccomp profile                                                                                                    | `RuntimeDefault`       |
-| `initJob.extraEnvVars`                                      | Array containing extra env vars to configure the credential init job                                                                                | `[]`                   |
-| `initJob.extraEnvVarsCM`                                    | ConfigMap containing extra env vars to configure the credential init job                                                                            | `""`                   |
-| `initJob.extraEnvVarsSecret`                                | Secret containing extra env vars to configure the credential init job (in case of sensitive data)                                                   | `""`                   |
-| `initJob.extraVolumeMounts`                                 | Array of extra volume mounts to be added to the jwt Container (evaluated as template). Normally used with `extraVolumes`.                           | `[]`                   |
-| `initJob.resources.limits`                                  | The resources limits for the container                                                                                                              | `{}`                   |
-| `initJob.resources.requests`                                | The requested resources for the container                                                                                                           | `{}`                   |
-| `initJob.hostAliases`                                       | Add deployment host aliases                                                                                                                         | `[]`                   |
-| `initJob.annotations`                                       | Add annotations to the job                                                                                                                          | `{}`                   |
-| `initJob.podLabels`                                         | Additional pod labels                                                                                                                               | `{}`                   |
-| `initJob.podAnnotations`                                    | Additional pod annotations                                                                                                                          | `{}`                   |
+| Name                                    | Description                                                                                                                                         | Value                      |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `milvus.image.registry`                 | Milvus image registry                                                                                                                               | `REGISTRY_NAME`            |
+| `milvus.image.repository`               | Milvus image repository                                                                                                                             | `REPOSITORY_NAME/milvus`   |
+| `milvus.image.digest`                   | Milvus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                                              | `""`                       |
+| `milvus.image.pullPolicy`               | Milvus image pull policy                                                                                                                            | `IfNotPresent`             |
+| `milvus.image.pullSecrets`              | Milvus image pull secrets                                                                                                                           | `[]`                       |
+| `milvus.image.debug`                    | Enable debug mode                                                                                                                                   | `false`                    |
+| `milvus.auth.enabled`                   | enable Milvus authentication                                                                                                                        | `false`                    |
+| `milvus.auth.username`                  | Milvus username                                                                                                                                     | `user`                     |
+| `milvus.auth.password`                  | Milvus username password                                                                                                                            | `""`                       |
+| `milvus.auth.rootPassword`              | Milvus root password                                                                                                                                | `""`                       |
+| `milvus.auth.existingSecret`            | Name of a secret containing the Milvus password                                                                                                     | `""`                       |
+| `milvus.auth.existingSecretPasswordKey` | Name of the secret key containing the Milvus password                                                                                               | `""`                       |
+| `milvus.defaultConfig`                  | Milvus components default configuration                                                                                                             | `""`                       |
+| `milvus.extraConfig`                    | Extra configuration parameters                                                                                                                      | `{}`                       |
+| `milvus.existingConfigMap`              | name of a ConfigMap with existing configuration for the default configuration                                                                       | `""`                       |
+| `milvus.extraConfigExistingConfigMap`   | name of a ConfigMap with existing configuration                                                                                                     | `""`                       |
+| `initJob.forceRun`                      | Force the run of the credential job                                                                                                                 | `false`                    |
+| `initJob.image.registry`                | PyMilvus image registry                                                                                                                             | `REGISTRY_NAME`            |
+| `initJob.image.repository`              | PyMilvus image repository                                                                                                                           | `REPOSITORY_NAME/pymilvus` |
+| `initJob.image.digest`                  | PyMilvus image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag image tag (immutable tags are recommended) | `""`                       |
+| `initJob.image.pullPolicy`              | PyMilvus image pull policy                                                                                                                          | `IfNotPresent`             |
+| `initJob.image.pullSecrets`             | PyMilvus image pull secrets                                                                                                                         | `[]`                       |
+| `initJob.enableDefaultInitContainers`   | Deploy default init containers                                                                                                                      | `true`                     |
 
-### Data Coordinator Deployment Parameters
+### TLS Client Configuration Parameters Connecting to Proxy
 
-| Name                                                          | Description                                                                                                | Value            |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------- |
-| `dataCoord.enabled`                                           | Enable Data Coordinator deployment                                                                         | `true`           |
-| `dataCoord.extraEnvVars`                                      | Array with extra environment variables to add to data coordinator nodes                                    | `[]`             |
-| `dataCoord.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data coordinator nodes                            | `""`             |
-| `dataCoord.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data coordinator nodes                               | `""`             |
-| `dataCoord.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                 | `""`             |
-| `dataCoord.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                              | `""`             |
-| `dataCoord.extraConfig`                                       | Override configuration                                                                                     | `{}`             |
-| `dataCoord.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the Dashboard                                          | `""`             |
-| `dataCoord.command`                                           | Override default container command (useful when using custom images)                                       | `[]`             |
-| `dataCoord.args`                                              | Override default container args (useful when using custom images)                                          | `[]`             |
-| `dataCoord.replicaCount`                                      | Number of Data Coordinator replicas to deploy                                                              | `1`              |
-| `dataCoord.containerPorts.grpc`                               | GRPC port for Data Coordinator                                                                             | `19530`          |
-| `dataCoord.containerPorts.metrics`                            | Metrics port for Data Coordinator                                                                          | `9091`           |
-| `dataCoord.livenessProbe.enabled`                             | Enable livenessProbe on Data Coordinator nodes                                                             | `true`           |
-| `dataCoord.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                    | `5`              |
-| `dataCoord.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                           | `10`             |
-| `dataCoord.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                          | `5`              |
-| `dataCoord.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                        | `5`              |
-| `dataCoord.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                        | `1`              |
-| `dataCoord.readinessProbe.enabled`                            | Enable readinessProbe on Data Coordinator nodes                                                            | `true`           |
-| `dataCoord.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                   | `5`              |
-| `dataCoord.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                          | `10`             |
-| `dataCoord.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                         | `5`              |
-| `dataCoord.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                       | `5`              |
-| `dataCoord.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                       | `1`              |
-| `dataCoord.startupProbe.enabled`                              | Enable startupProbe on Data Coordinator containers                                                         | `false`          |
-| `dataCoord.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                     | `5`              |
-| `dataCoord.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                            | `10`             |
-| `dataCoord.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                           | `5`              |
-| `dataCoord.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                         | `5`              |
-| `dataCoord.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                         | `1`              |
-| `dataCoord.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                        | `{}`             |
-| `dataCoord.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                       | `{}`             |
-| `dataCoord.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                         | `{}`             |
-| `dataCoord.resources.limits`                                  | The resources limits for the data coordinator containers                                                   | `{}`             |
-| `dataCoord.resources.requests`                                | The requested resources for the data coordinator containers                                                | `{}`             |
-| `dataCoord.podSecurityContext.enabled`                        | Enabled Data Coordinator pods' Security Context                                                            | `true`           |
-| `dataCoord.podSecurityContext.fsGroup`                        | Set Data Coordinator pod's Security Context fsGroup                                                        | `1001`           |
-| `dataCoord.podSecurityContext.seccompProfile.type`            | Set Data Coordinator container's Security Context seccomp profile                                          | `RuntimeDefault` |
-| `dataCoord.containerSecurityContext.enabled`                  | Enabled Data Coordinator containers' Security Context                                                      | `true`           |
-| `dataCoord.containerSecurityContext.runAsUser`                | Set Data Coordinator containers' Security Context runAsUser                                                | `1001`           |
-| `dataCoord.containerSecurityContext.runAsNonRoot`             | Set Data Coordinator containers' Security Context runAsNonRoot                                             | `true`           |
-| `dataCoord.containerSecurityContext.readOnlyRootFilesystem`   | Set Data Coordinator containers' Security Context runAsNonRoot                                             | `true`           |
-| `dataCoord.containerSecurityContext.allowPrivilegeEscalation` | Set Data Coordinator container's privilege escalation                                                      | `false`          |
-| `dataCoord.containerSecurityContext.capabilities.drop`        | Set Data Coordinator container's Security Context runAsNonRoot                                             | `["ALL"]`        |
-| `dataCoord.lifecycleHooks`                                    | for the data coordinator container(s) to automate configuration before or after startup                    | `{}`             |
-| `dataCoord.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                             | `""`             |
-| `dataCoord.hostAliases`                                       | data coordinator pods host aliases                                                                         | `[]`             |
-| `dataCoord.podLabels`                                         | Extra labels for data coordinator pods                                                                     | `{}`             |
-| `dataCoord.podAnnotations`                                    | Annotations for data coordinator pods                                                                      | `{}`             |
-| `dataCoord.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard`       | `""`             |
-| `dataCoord.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard`  | `soft`           |
-| `dataCoord.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard` | `""`             |
-| `dataCoord.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data coordinator.affinity` is set                                     | `""`             |
-| `dataCoord.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data coordinator.affinity` is set                                  | `[]`             |
-| `dataCoord.affinity`                                          | Affinity for Data Coordinator pods assignment                                                              | `{}`             |
-| `dataCoord.nodeSelector`                                      | Node labels for Data Coordinator pods assignment                                                           | `{}`             |
-| `dataCoord.tolerations`                                       | Tolerations for Data Coordinator pods assignment                                                           | `[]`             |
-| `dataCoord.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains            | `[]`             |
-| `dataCoord.priorityClassName`                                 | Data Coordinator pods' priorityClassName                                                                   | `""`             |
-| `dataCoord.schedulerName`                                     | Kubernetes pod scheduler registry                                                                          | `""`             |
-| `dataCoord.updateStrategy.type`                               | Data Coordinator statefulset strategy type                                                                 | `RollingUpdate`  |
-| `dataCoord.updateStrategy.rollingUpdate`                      | Data Coordinator statefulset rolling update configuration parameters                                       | `{}`             |
-| `dataCoord.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Data Coordinator pod(s)                        | `[]`             |
-| `dataCoord.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Data Coordinator container(s)             | `[]`             |
-| `dataCoord.sidecars`                                          | Add additional sidecar containers to the Data Coordinator pod(s)                                           | `[]`             |
-| `dataCoord.enableDefaultInitContainers`                       | Deploy default init containers                                                                             | `true`           |
-| `dataCoord.initContainers`                                    | Add additional init containers to the Data Coordinator pod(s)                                              | `[]`             |
-| `dataCoord.serviceAccount.create`                             | Enable creation of ServiceAccount for Data Coordinator pods                                                | `false`          |
-| `dataCoord.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                      | `""`             |
-| `dataCoord.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                     | `false`          |
-| `dataCoord.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                       | `{}`             |
-| `dataCoord.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                            | `false`          |
-| `dataCoord.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                             | `1`              |
-| `dataCoord.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                             | `""`             |
+| Name                                                        | Description                                                                                                                                                                                                                       | Value            |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `initJob.tls.existingSecret`                                | Name of the existing secret containing the TLS certificates for initJob.                                                                                                                                                          | `""`             |
+| `initJob.tls.cert`                                          | The secret key from the existingSecret if 'cert' key different from the default (client.pem)                                                                                                                                      | `client.pem`     |
+| `initJob.tls.key`                                           | The secret key from the existingSecret if 'key' key different from the default (client.key)                                                                                                                                       | `client.key`     |
+| `initJob.tls.caCert`                                        | The secret key from the existingSecret if 'caCert' key different from the default (ca.pem)                                                                                                                                        | `ca.pem`         |
+| `initJob.tls.keyPassword`                                   | Password to access the password-protected PEM key if necessary.                                                                                                                                                                   | `""`             |
+| `initJob.backoffLimit`                                      | set backoff limit of the job                                                                                                                                                                                                      | `10`             |
+| `initJob.extraVolumes`                                      | Optionally specify extra list of additional volumes for the credential init job                                                                                                                                                   | `[]`             |
+| `initJob.extraCommands`                                     | Extra commands to pass to the generation job                                                                                                                                                                                      | `""`             |
+| `initJob.containerSecurityContext.enabled`                  | Enabled containers' Security Context                                                                                                                                                                                              | `true`           |
+| `initJob.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                                                                                                                                  | `{}`             |
+| `initJob.containerSecurityContext.runAsUser`                | Set containers' Security Context runAsUser                                                                                                                                                                                        | `1001`           |
+| `initJob.containerSecurityContext.runAsGroup`               | Set containers' Security Context runAsGroup                                                                                                                                                                                       | `1001`           |
+| `initJob.containerSecurityContext.runAsNonRoot`             | Set container's Security Context runAsNonRoot                                                                                                                                                                                     | `true`           |
+| `initJob.containerSecurityContext.privileged`               | Set container's Security Context privileged                                                                                                                                                                                       | `false`          |
+| `initJob.containerSecurityContext.readOnlyRootFilesystem`   | Set container's Security Context readOnlyRootFilesystem                                                                                                                                                                           | `true`           |
+| `initJob.containerSecurityContext.allowPrivilegeEscalation` | Set container's Security Context allowPrivilegeEscalation                                                                                                                                                                         | `false`          |
+| `initJob.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                                                                                                                                | `["ALL"]`        |
+| `initJob.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                                                                                                                                  | `RuntimeDefault` |
+| `initJob.podSecurityContext.enabled`                        | Enabled credential init job pods' Security Context                                                                                                                                                                                | `true`           |
+| `initJob.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy                                                                                                                                                                                                | `Always`         |
+| `initJob.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface                                                                                                                                                                                    | `[]`             |
+| `initJob.podSecurityContext.supplementalGroups`             | Set filesystem extra groups                                                                                                                                                                                                       | `[]`             |
+| `initJob.podSecurityContext.fsGroup`                        | Set credential init job pod's Security Context fsGroup                                                                                                                                                                            | `1001`           |
+| `initJob.extraEnvVars`                                      | Array containing extra env vars to configure the credential init job                                                                                                                                                              | `[]`             |
+| `initJob.extraEnvVarsCM`                                    | ConfigMap containing extra env vars to configure the credential init job                                                                                                                                                          | `""`             |
+| `initJob.extraEnvVarsSecret`                                | Secret containing extra env vars to configure the credential init job (in case of sensitive data)                                                                                                                                 | `""`             |
+| `initJob.extraVolumeMounts`                                 | Array of extra volume mounts to be added to the jwt Container (evaluated as template). Normally used with `extraVolumes`.                                                                                                         | `[]`             |
+| `initJob.resourcesPreset`                                   | Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if initJob.resources is set (initJob.resources is recommended for production). | `micro`          |
+| `initJob.resources`                                         | Set container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                 | `{}`             |
+| `initJob.livenessProbe.enabled`                             | Enable livenessProbe on init job                                                                                                                                                                                                  | `true`           |
+| `initJob.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                           | `5`              |
+| `initJob.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                                  | `10`             |
+| `initJob.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                                 | `5`              |
+| `initJob.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                               | `5`              |
+| `initJob.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                               | `1`              |
+| `initJob.readinessProbe.enabled`                            | Enable readinessProbe on init job                                                                                                                                                                                                 | `true`           |
+| `initJob.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                                          | `5`              |
+| `initJob.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                                 | `10`             |
+| `initJob.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                                | `5`              |
+| `initJob.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                              | `5`              |
+| `initJob.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                              | `1`              |
+| `initJob.startupProbe.enabled`                              | Enable startupProbe on init job                                                                                                                                                                                                   | `false`          |
+| `initJob.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                            | `5`              |
+| `initJob.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                                   | `10`             |
+| `initJob.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                                  | `5`              |
+| `initJob.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                                | `5`              |
+| `initJob.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                                | `1`              |
+| `initJob.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                                                                                                                                               | `{}`             |
+| `initJob.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                                                                                                                                              | `{}`             |
+| `initJob.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                                                                                                                                                | `{}`             |
+| `initJob.automountServiceAccountToken`                      | Mount Service Account token in pod                                                                                                                                                                                                | `false`          |
+| `initJob.hostAliases`                                       | Add deployment host aliases                                                                                                                                                                                                       | `[]`             |
+| `initJob.annotations`                                       | Add annotations to the job                                                                                                                                                                                                        | `{}`             |
+| `initJob.podLabels`                                         | Additional pod labels                                                                                                                                                                                                             | `{}`             |
+| `initJob.podAnnotations`                                    | Additional pod annotations                                                                                                                                                                                                        | `{}`             |
+| `initJob.networkPolicy.enabled`                             | Enable creation of NetworkPolicy resources                                                                                                                                                                                        | `true`           |
+| `initJob.networkPolicy.allowExternalEgress`                 | Allow the pod to access any range of port and all destinations.                                                                                                                                                                   | `true`           |
+| `initJob.networkPolicy.extraIngress`                        | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                                      | `[]`             |
+| `initJob.networkPolicy.extraEgress`                         | Add extra ingress rules to the NetworkPolicy                                                                                                                                                                                      | `[]`             |
+| `initJob.networkPolicy.ingressNSMatchLabels`                | Labels to match to allow traffic from other namespaces                                                                                                                                                                            | `{}`             |
+| `initJob.networkPolicy.ingressNSPodMatchLabels`             | Pod labels to match to allow traffic from other namespaces                                                                                                                                                                        | `{}`             |
 
-### Data Coordinator Autoscaling configuration
+### Coordinator Deployment Parameters
 
-| Name                                                | Description                                                                                                                                                            | Value   |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `dataCoord.autoscaling.vpa.enabled`                 | Enable VPA                                                                                                                                                             | `false` |
-| `dataCoord.autoscaling.vpa.annotations`             | Annotations for VPA resource                                                                                                                                           | `{}`    |
-| `dataCoord.autoscaling.vpa.controlledResources`     | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                         | `[]`    |
-| `dataCoord.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
-| `dataCoord.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
-| `dataCoord.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `dataCoord.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
-| `dataCoord.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `dataCoord.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `dataCoord.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `dataCoord.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
-| `dataCoord.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
+| Name                                                            | Description                                                                                                                                                                                                                               | Value            |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `coordinator.enabled`                                           | Enable Coordinator deployment                                                                                                                                                                                                             | `true`           |
+| `coordinator.extraEnvVars`                                      | Array with extra environment variables to add to coordinator nodes                                                                                                                                                                        | `[]`             |
+| `coordinator.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for coordinator nodes                                                                                                                                                                | `""`             |
+| `coordinator.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for coordinator nodes                                                                                                                                                                   | `""`             |
+| `coordinator.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                                                                                                                                                | `""`             |
+| `coordinator.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                                                                                                                                                             | `""`             |
+| `coordinator.extraConfig`                                       | Override configuration                                                                                                                                                                                                                    | `{}`             |
+| `coordinator.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration                                                                                                                                                                                           | `""`             |
+| `coordinator.command`                                           | Override default container command (useful when using custom images)                                                                                                                                                                      | `[]`             |
+| `coordinator.args`                                              | Override default container args (useful when using custom images)                                                                                                                                                                         | `[]`             |
+| `coordinator.replicaCount`                                      | Number of Coordinator replicas to deploy                                                                                                                                                                                                  | `1`              |
+| `coordinator.containerPorts.metrics`                            | Metrics port for Coordinator                                                                                                                                                                                                              | `9091`           |
+| `coordinator.livenessProbe.enabled`                             | Enable livenessProbe on Coordinator nodes                                                                                                                                                                                                 | `true`           |
+| `coordinator.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                                   | `5`              |
+| `coordinator.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                                          | `10`             |
+| `coordinator.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                                         | `5`              |
+| `coordinator.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                                       | `5`              |
+| `coordinator.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                                       | `1`              |
+| `coordinator.readinessProbe.enabled`                            | Enable readinessProbe on Coordinator nodes                                                                                                                                                                                                | `true`           |
+| `coordinator.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                                                  | `5`              |
+| `coordinator.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                                         | `10`             |
+| `coordinator.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                                        | `5`              |
+| `coordinator.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                                      | `5`              |
+| `coordinator.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                                      | `1`              |
+| `coordinator.startupProbe.enabled`                              | Enable startupProbe on Coordinator containers                                                                                                                                                                                             | `false`          |
+| `coordinator.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                                    | `5`              |
+| `coordinator.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                                           | `10`             |
+| `coordinator.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                                          | `5`              |
+| `coordinator.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                                        | `5`              |
+| `coordinator.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                                        | `1`              |
+| `coordinator.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                                                                                                                                                       | `{}`             |
+| `coordinator.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                                                                                                                                                      | `{}`             |
+| `coordinator.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                                                                                                                                                        | `{}`             |
+| `coordinator.resourcesPreset`                                   | Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if coordinator.resources is set (coordinator.resources is recommended for production). | `micro`          |
+| `coordinator.resources`                                         | Set container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                         | `{}`             |
+| `coordinator.podSecurityContext.enabled`                        | Enabled Coordinator pods' Security Context                                                                                                                                                                                                | `true`           |
+| `coordinator.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy                                                                                                                                                                                                        | `Always`         |
+| `coordinator.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface                                                                                                                                                                                            | `[]`             |
+| `coordinator.podSecurityContext.supplementalGroups`             | Set filesystem extra groups                                                                                                                                                                                                               | `[]`             |
+| `coordinator.podSecurityContext.fsGroup`                        | Set Coordinator pod's Security Context fsGroup                                                                                                                                                                                            | `1001`           |
+| `coordinator.containerSecurityContext.enabled`                  | Enabled containers' Security Context                                                                                                                                                                                                      | `true`           |
+| `coordinator.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                                                                                                                                          | `{}`             |
+| `coordinator.containerSecurityContext.runAsUser`                | Set containers' Security Context runAsUser                                                                                                                                                                                                | `1001`           |
+| `coordinator.containerSecurityContext.runAsGroup`               | Set containers' Security Context runAsGroup                                                                                                                                                                                               | `1001`           |
+| `coordinator.containerSecurityContext.runAsNonRoot`             | Set container's Security Context runAsNonRoot                                                                                                                                                                                             | `true`           |
+| `coordinator.containerSecurityContext.privileged`               | Set container's Security Context privileged                                                                                                                                                                                               | `false`          |
+| `coordinator.containerSecurityContext.readOnlyRootFilesystem`   | Set container's Security Context readOnlyRootFilesystem                                                                                                                                                                                   | `true`           |
+| `coordinator.containerSecurityContext.allowPrivilegeEscalation` | Set container's Security Context allowPrivilegeEscalation                                                                                                                                                                                 | `false`          |
+| `coordinator.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                                                                                                                                        | `["ALL"]`        |
+| `coordinator.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                                                                                                                                          | `RuntimeDefault` |
+| `coordinator.lifecycleHooks`                                    | for the coordinator container(s) to automate configuration before or after startup                                                                                                                                                        | `{}`             |
+| `coordinator.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                                                                                                                                                            | `""`             |
+| `coordinator.automountServiceAccountToken`                      | Mount Service Account token in pod                                                                                                                                                                                                        | `false`          |
+| `coordinator.hostAliases`                                       | coordinator pods host aliases                                                                                                                                                                                                             | `[]`             |
+| `coordinator.podLabels`                                         | Extra labels for coordinator pods                                                                                                                                                                                                         | `{}`             |
+| `coordinator.podAnnotations`                                    | Annotations for coordinator pods                                                                                                                                                                                                          | `{}`             |
+| `coordinator.podAffinityPreset`                                 | Pod affinity preset. Ignored if `coordinator.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                           | `""`             |
+| `coordinator.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `coordinator.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                      | `soft`           |
+| `coordinator.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `coordinator.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                     | `""`             |
+| `coordinator.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `coordinator.affinity` is set                                                                                                                                                                         | `""`             |
+| `coordinator.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `coordinator.affinity` is set                                                                                                                                                                      | `[]`             |
+| `coordinator.affinity`                                          | Affinity for Coordinator pods assignment                                                                                                                                                                                                  | `{}`             |
+| `coordinator.nodeSelector`                                      | Node labels for Coordinator pods assignment                                                                                                                                                                                               | `{}`             |
+| `coordinator.tolerations`                                       | Tolerations for Coordinator pods assignment                                                                                                                                                                                               | `[]`             |
+| `coordinator.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains                                                                                                                                           | `[]`             |
+| `coordinator.priorityClassName`                                 | Coordinator pods' priorityClassName                                                                                                                                                                                                       | `""`             |
+| `coordinator.schedulerName`                                     | Kubernetes pod scheduler registry                                                                                                                                                                                                         | `""`             |
+| `coordinator.updateStrategy.type`                               | Coordinator statefulset strategy type                                                                                                                                                                                                     | `RollingUpdate`  |
+| `coordinator.updateStrategy.rollingUpdate`                      | Coordinator statefulset rolling update configuration parameters                                                                                                                                                                           | `{}`             |
+| `coordinator.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Coordinator pod(s)                                                                                                                                                            | `[]`             |
+| `coordinator.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Coordinator container(s)                                                                                                                                                 | `[]`             |
+| `coordinator.sidecars`                                          | Add additional sidecar containers to the Coordinator pod(s)                                                                                                                                                                               | `[]`             |
+| `coordinator.enableDefaultInitContainers`                       | Deploy default init containers                                                                                                                                                                                                            | `true`           |
+| `coordinator.initContainers`                                    | Add additional init containers to the Coordinator pod(s)                                                                                                                                                                                  | `[]`             |
+| `coordinator.serviceAccount.create`                             | Enable creation of ServiceAccount for Coordinator pods                                                                                                                                                                                    | `true`           |
+| `coordinator.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                                                                                                                                                     | `""`             |
+| `coordinator.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                                                                                                                                                    | `false`          |
+| `coordinator.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                                                                                                                                                      | `{}`             |
+| `coordinator.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                                                                                                                                                           | `true`           |
+| `coordinator.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                                            | `{}`             |
+| `coordinator.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `coordinator.pdb.minAvailable` and `coordinator.pdb.maxUnavailable` are empty.                                                                    | `{}`             |
 
-### Data Coordinator Traffic Exposure Parameters
+### Coordinator Autoscaling configuration
 
-| Name                                              | Description                                                      | Value       |
-| ------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| `dataCoord.service.type`                          | Data Coordinator service type                                    | `ClusterIP` |
-| `dataCoord.service.ports.grpc`                    | Data Coordinator GRPC service port                               | `19530`     |
-| `dataCoord.service.ports.metrics`                 | Data Coordinator Metrics service port                            | `9091`      |
-| `dataCoord.service.nodePorts.grpc`                | Node port for GRPC                                               | `""`        |
-| `dataCoord.service.nodePorts.metrics`             | Node port for Metrics                                            | `""`        |
-| `dataCoord.service.sessionAffinityConfig`         | Additional settings for the sessionAffinity                      | `{}`        |
-| `dataCoord.service.sessionAffinity`               | Control where client requests go, to the same pod or round-robin | `None`      |
-| `dataCoord.service.clusterIP`                     | Data Coordinator service Cluster IP                              | `""`        |
-| `dataCoord.service.loadBalancerIP`                | Data Coordinator service Load Balancer IP                        | `""`        |
-| `dataCoord.service.loadBalancerSourceRanges`      | Data Coordinator service Load Balancer sources                   | `[]`        |
-| `dataCoord.service.externalTrafficPolicy`         | Data Coordinator service external traffic policy                 | `Cluster`   |
-| `dataCoord.service.annotations`                   | Additional custom annotations for Data Coordinator service       | `{}`        |
-| `dataCoord.service.extraPorts`                    | Extra ports to expose in the Data Coordinator service            | `[]`        |
-| `dataCoord.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `false`     |
-| `dataCoord.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
-| `dataCoord.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `dataCoord.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `dataCoord.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
-| `dataCoord.networkPolicy.ingressNSPodMatchLabels` | Pod labels to match to allow traffic from other namespaces       | `{}`        |
+| Name                                                  | Description                                                                                                                                                            | Value   |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `coordinator.autoscaling.vpa.enabled`                 | Enable VPA                                                                                                                                                             | `false` |
+| `coordinator.autoscaling.vpa.annotations`             | Annotations for VPA resource                                                                                                                                           | `{}`    |
+| `coordinator.autoscaling.vpa.controlledResources`     | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                         | `[]`    |
+| `coordinator.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
+| `coordinator.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
+| `coordinator.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
+| `coordinator.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Coordinator                                                                                                                                      | `false` |
+| `coordinator.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
+| `coordinator.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Coordinator replicas                                                                                                                          | `""`    |
+| `coordinator.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Coordinator replicas                                                                                                                          | `""`    |
+| `coordinator.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
+| `coordinator.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
 
-### Data Coordinator Metrics Parameters
+### Coordinator Traffic Exposure Parameters
 
-| Name                                                 | Description                                                                           | Value   |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ------- |
-| `dataCoord.metrics.enabled`                          | Enable metrics                                                                        | `false` |
-| `dataCoord.metrics.annotations`                      | Annotations for the server service in order to scrape metrics                         | `{}`    |
-| `dataCoord.metrics.serviceMonitor.enabled`           | Create ServiceMonitor Resource for scraping metrics using Prometheus Operator         | `false` |
-| `dataCoord.metrics.serviceMonitor.annotations`       | Annotations for the ServiceMonitor Resource                                           | `""`    |
-| `dataCoord.metrics.serviceMonitor.namespace`         | Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)         | `""`    |
-| `dataCoord.metrics.serviceMonitor.interval`          | Interval at which metrics should be scraped.                                          | `""`    |
-| `dataCoord.metrics.serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                               | `""`    |
-| `dataCoord.metrics.serviceMonitor.labels`            | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus | `{}`    |
-| `dataCoord.metrics.serviceMonitor.selector`          | Prometheus instance selector labels                                                   | `{}`    |
-| `dataCoord.metrics.serviceMonitor.relabelings`       | RelabelConfigs to apply to samples before scraping                                    | `[]`    |
-| `dataCoord.metrics.serviceMonitor.metricRelabelings` | MetricRelabelConfigs to apply to samples before ingestion                             | `[]`    |
-| `dataCoord.metrics.serviceMonitor.honorLabels`       | Specify honorLabels parameter to add the scrape endpoint                              | `false` |
-| `dataCoord.metrics.serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in prometheus.     | `""`    |
+| Name                                                | Description                                                      | Value       |
+| --------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
+| `coordinator.service.type`                          | Coordinator service type                                         | `ClusterIP` |
+| `coordinator.service.ports.metrics`                 | Coordinator Metrics service port                                 | `9091`      |
+| `coordinator.service.nodePorts.metrics`             | Node port for Metrics                                            | `""`        |
+| `coordinator.service.sessionAffinityConfig`         | Additional settings for the sessionAffinity                      | `{}`        |
+| `coordinator.service.sessionAffinity`               | Control where client requests go, to the same pod or round-robin | `None`      |
+| `coordinator.service.clusterIP`                     | Coordinator service Cluster IP                                   | `""`        |
+| `coordinator.service.loadBalancerIP`                | Coordinator service Load Balancer IP                             | `""`        |
+| `coordinator.service.loadBalancerSourceRanges`      | Coordinator service Load Balancer sources                        | `[]`        |
+| `coordinator.service.externalTrafficPolicy`         | Coordinator service external traffic policy                      | `Cluster`   |
+| `coordinator.service.annotations`                   | Additional custom annotations for Coordinator service            | `{}`        |
+| `coordinator.service.extraPorts`                    | Extra ports to expose in the Coordinator service                 | `[]`        |
+| `coordinator.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `true`      |
+| `coordinator.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
+| `coordinator.networkPolicy.allowExternalEgress`     | Allow the pod to access any range of port and all destinations.  | `true`      |
+| `coordinator.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
+| `coordinator.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
+| `coordinator.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
+| `coordinator.networkPolicy.ingressNSPodMatchLabels` | Pod labels to match to allow traffic from other namespaces       | `{}`        |
 
-### Root Coordinator Deployment Parameters
+### Coordinator Metrics Parameters
 
-| Name                                                          | Description                                                                                                | Value            |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------- |
-| `rootCoord.enabled`                                           | Enable Root Coordinator deployment                                                                         | `true`           |
-| `rootCoord.extraEnvVars`                                      | Array with extra environment variables to add to data coordinator nodes                                    | `[]`             |
-| `rootCoord.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data coordinator nodes                            | `""`             |
-| `rootCoord.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data coordinator nodes                               | `""`             |
-| `rootCoord.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                 | `""`             |
-| `rootCoord.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                              | `""`             |
-| `rootCoord.extraConfig`                                       | Override configuration                                                                                     | `{}`             |
-| `rootCoord.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the Dashboard                                          | `""`             |
-| `rootCoord.command`                                           | Override default container command (useful when using custom images)                                       | `[]`             |
-| `rootCoord.args`                                              | Override default container args (useful when using custom images)                                          | `[]`             |
-| `rootCoord.replicaCount`                                      | Number of Root Coordinator replicas to deploy                                                              | `1`              |
-| `rootCoord.containerPorts.grpc`                               | GRPC port for Root Coordinator                                                                             | `19530`          |
-| `rootCoord.containerPorts.metrics`                            | Metrics port for Root Coordinator                                                                          | `9091`           |
-| `rootCoord.livenessProbe.enabled`                             | Enable livenessProbe on Root Coordinator nodes                                                             | `true`           |
-| `rootCoord.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                    | `5`              |
-| `rootCoord.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                           | `10`             |
-| `rootCoord.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                          | `5`              |
-| `rootCoord.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                        | `5`              |
-| `rootCoord.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                        | `1`              |
-| `rootCoord.readinessProbe.enabled`                            | Enable readinessProbe on Root Coordinator nodes                                                            | `true`           |
-| `rootCoord.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                   | `5`              |
-| `rootCoord.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                          | `10`             |
-| `rootCoord.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                         | `5`              |
-| `rootCoord.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                       | `5`              |
-| `rootCoord.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                       | `1`              |
-| `rootCoord.startupProbe.enabled`                              | Enable startupProbe on Root Coordinator containers                                                         | `false`          |
-| `rootCoord.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                     | `5`              |
-| `rootCoord.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                            | `10`             |
-| `rootCoord.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                           | `5`              |
-| `rootCoord.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                         | `5`              |
-| `rootCoord.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                         | `1`              |
-| `rootCoord.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                        | `{}`             |
-| `rootCoord.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                       | `{}`             |
-| `rootCoord.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                         | `{}`             |
-| `rootCoord.resources.limits`                                  | The resources limits for the data coordinator containers                                                   | `{}`             |
-| `rootCoord.resources.requests`                                | The requested resources for the data coordinator containers                                                | `{}`             |
-| `rootCoord.podSecurityContext.enabled`                        | Enabled Root Coordinator pods' Security Context                                                            | `true`           |
-| `rootCoord.podSecurityContext.fsGroup`                        | Set Root Coordinator pod's Security Context fsGroup                                                        | `1001`           |
-| `rootCoord.podSecurityContext.seccompProfile.type`            | Set Root Coordinator container's Security Context seccomp profile                                          | `RuntimeDefault` |
-| `rootCoord.containerSecurityContext.enabled`                  | Enabled Root Coordinator containers' Security Context                                                      | `true`           |
-| `rootCoord.containerSecurityContext.runAsUser`                | Set Root Coordinator containers' Security Context runAsUser                                                | `1001`           |
-| `rootCoord.containerSecurityContext.runAsNonRoot`             | Set Root Coordinator containers' Security Context runAsNonRoot                                             | `true`           |
-| `rootCoord.containerSecurityContext.readOnlyRootFilesystem`   | Set Root Coordinator containers' Security Context runAsNonRoot                                             | `true`           |
-| `rootCoord.containerSecurityContext.allowPrivilegeEscalation` | Set Root Coordinator container's privilege escalation                                                      | `false`          |
-| `rootCoord.containerSecurityContext.capabilities.drop`        | Set Root Coordinator container's Security Context runAsNonRoot                                             | `["ALL"]`        |
-| `rootCoord.lifecycleHooks`                                    | for the data coordinator container(s) to automate configuration before or after startup                    | `{}`             |
-| `rootCoord.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                             | `""`             |
-| `rootCoord.hostAliases`                                       | data coordinator pods host aliases                                                                         | `[]`             |
-| `rootCoord.podLabels`                                         | Extra labels for data coordinator pods                                                                     | `{}`             |
-| `rootCoord.podAnnotations`                                    | Annotations for data coordinator pods                                                                      | `{}`             |
-| `rootCoord.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard`       | `""`             |
-| `rootCoord.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard`  | `soft`           |
-| `rootCoord.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard` | `""`             |
-| `rootCoord.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data coordinator.affinity` is set                                     | `""`             |
-| `rootCoord.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data coordinator.affinity` is set                                  | `[]`             |
-| `rootCoord.affinity`                                          | Affinity for Root Coordinator pods assignment                                                              | `{}`             |
-| `rootCoord.nodeSelector`                                      | Node labels for Root Coordinator pods assignment                                                           | `{}`             |
-| `rootCoord.tolerations`                                       | Tolerations for Root Coordinator pods assignment                                                           | `[]`             |
-| `rootCoord.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains            | `[]`             |
-| `rootCoord.priorityClassName`                                 | Root Coordinator pods' priorityClassName                                                                   | `""`             |
-| `rootCoord.schedulerName`                                     | Kubernetes pod scheduler registry                                                                          | `""`             |
-| `rootCoord.updateStrategy.type`                               | Root Coordinator statefulset strategy type                                                                 | `RollingUpdate`  |
-| `rootCoord.updateStrategy.rollingUpdate`                      | Root Coordinator statefulset rolling update configuration parameters                                       | `{}`             |
-| `rootCoord.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Root Coordinator pod(s)                        | `[]`             |
-| `rootCoord.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Root Coordinator container(s)             | `[]`             |
-| `rootCoord.sidecars`                                          | Add additional sidecar containers to the Root Coordinator pod(s)                                           | `[]`             |
-| `rootCoord.enableDefaultInitContainers`                       | Deploy default init containers                                                                             | `true`           |
-| `rootCoord.initContainers`                                    | Add additional init containers to the Root Coordinator pod(s)                                              | `[]`             |
-| `rootCoord.serviceAccount.create`                             | Enable creation of ServiceAccount for Root Coordinator pods                                                | `false`          |
-| `rootCoord.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                      | `""`             |
-| `rootCoord.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                     | `false`          |
-| `rootCoord.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                       | `{}`             |
-| `rootCoord.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                            | `false`          |
-| `rootCoord.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                             | `1`              |
-| `rootCoord.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                             | `""`             |
-
-### Root Coordinator Autoscaling configuration
-
-| Name                                                | Description                                                                                                                                                            | Value   |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `rootCoord.autoscaling.vpa.enabled`                 | Enable VPA                                                                                                                                                             | `false` |
-| `rootCoord.autoscaling.vpa.annotations`             | Annotations for VPA resource                                                                                                                                           | `{}`    |
-| `rootCoord.autoscaling.vpa.controlledResources`     | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                         | `[]`    |
-| `rootCoord.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
-| `rootCoord.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
-| `rootCoord.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `rootCoord.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
-| `rootCoord.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `rootCoord.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `rootCoord.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `rootCoord.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
-| `rootCoord.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
-
-### Root Coordinator Traffic Exposure Parameters
-
-| Name                                              | Description                                                      | Value       |
-| ------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| `rootCoord.service.type`                          | Root Coordinator service type                                    | `ClusterIP` |
-| `rootCoord.service.ports.grpc`                    | Root Coordinator GRPC service port                               | `19530`     |
-| `rootCoord.service.ports.metrics`                 | Root Coordinator Metrics service port                            | `9091`      |
-| `rootCoord.service.nodePorts.grpc`                | Node port for GRPC                                               | `""`        |
-| `rootCoord.service.nodePorts.metrics`             | Node port for Metrics                                            | `""`        |
-| `rootCoord.service.sessionAffinityConfig`         | Additional settings for the sessionAffinity                      | `{}`        |
-| `rootCoord.service.sessionAffinity`               | Control where client requests go, to the same pod or round-robin | `None`      |
-| `rootCoord.service.clusterIP`                     | Root Coordinator service Cluster IP                              | `""`        |
-| `rootCoord.service.loadBalancerIP`                | Root Coordinator service Load Balancer IP                        | `""`        |
-| `rootCoord.service.loadBalancerSourceRanges`      | Root Coordinator service Load Balancer sources                   | `[]`        |
-| `rootCoord.service.externalTrafficPolicy`         | Root Coordinator service external traffic policy                 | `Cluster`   |
-| `rootCoord.service.annotations`                   | Additional custom annotations for Root Coordinator service       | `{}`        |
-| `rootCoord.service.extraPorts`                    | Extra ports to expose in the Root Coordinator service            | `[]`        |
-| `rootCoord.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `false`     |
-| `rootCoord.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
-| `rootCoord.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `rootCoord.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `rootCoord.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
-| `rootCoord.networkPolicy.ingressNSPodMatchLabels` | Pod labels to match to allow traffic from other namespaces       | `{}`        |
-
-### Root Coordinator Metrics Parameters
-
-| Name                                                 | Description                                                                           | Value   |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ------- |
-| `rootCoord.metrics.enabled`                          | Enable metrics                                                                        | `false` |
-| `rootCoord.metrics.annotations`                      | Annotations for the server service in order to scrape metrics                         | `{}`    |
-| `rootCoord.metrics.serviceMonitor.enabled`           | Create ServiceMonitor Resource for scraping metrics using Prometheus Operator         | `false` |
-| `rootCoord.metrics.serviceMonitor.annotations`       | Annotations for the ServiceMonitor Resource                                           | `""`    |
-| `rootCoord.metrics.serviceMonitor.namespace`         | Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)         | `""`    |
-| `rootCoord.metrics.serviceMonitor.interval`          | Interval at which metrics should be scraped.                                          | `""`    |
-| `rootCoord.metrics.serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                               | `""`    |
-| `rootCoord.metrics.serviceMonitor.labels`            | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus | `{}`    |
-| `rootCoord.metrics.serviceMonitor.selector`          | Prometheus instance selector labels                                                   | `{}`    |
-| `rootCoord.metrics.serviceMonitor.relabelings`       | RelabelConfigs to apply to samples before scraping                                    | `[]`    |
-| `rootCoord.metrics.serviceMonitor.metricRelabelings` | MetricRelabelConfigs to apply to samples before ingestion                             | `[]`    |
-| `rootCoord.metrics.serviceMonitor.honorLabels`       | Specify honorLabels parameter to add the scrape endpoint                              | `false` |
-| `rootCoord.metrics.serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in prometheus.     | `""`    |
-
-### Query Coordinator Deployment Parameters
-
-| Name                                                           | Description                                                                                                | Value            |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------- |
-| `queryCoord.enabled`                                           | Enable Query Coordinator deployment                                                                        | `true`           |
-| `queryCoord.extraEnvVars`                                      | Array with extra environment variables to add to data coordinator nodes                                    | `[]`             |
-| `queryCoord.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data coordinator nodes                            | `""`             |
-| `queryCoord.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data coordinator nodes                               | `""`             |
-| `queryCoord.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                 | `""`             |
-| `queryCoord.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                              | `""`             |
-| `queryCoord.extraConfig`                                       | Override configuration                                                                                     | `{}`             |
-| `queryCoord.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the Dashboard                                          | `""`             |
-| `queryCoord.command`                                           | Override default container command (useful when using custom images)                                       | `[]`             |
-| `queryCoord.args`                                              | Override default container args (useful when using custom images)                                          | `[]`             |
-| `queryCoord.replicaCount`                                      | Number of Query Coordinator replicas to deploy                                                             | `1`              |
-| `queryCoord.containerPorts.grpc`                               | GRPC port for Query Coordinator                                                                            | `19530`          |
-| `queryCoord.containerPorts.metrics`                            | Metrics port for Query Coordinator                                                                         | `9091`           |
-| `queryCoord.livenessProbe.enabled`                             | Enable livenessProbe on Query Coordinator nodes                                                            | `true`           |
-| `queryCoord.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                    | `5`              |
-| `queryCoord.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                           | `10`             |
-| `queryCoord.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                          | `5`              |
-| `queryCoord.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                        | `5`              |
-| `queryCoord.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                        | `1`              |
-| `queryCoord.readinessProbe.enabled`                            | Enable readinessProbe on Query Coordinator nodes                                                           | `true`           |
-| `queryCoord.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                   | `5`              |
-| `queryCoord.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                          | `10`             |
-| `queryCoord.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                         | `5`              |
-| `queryCoord.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                       | `5`              |
-| `queryCoord.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                       | `1`              |
-| `queryCoord.startupProbe.enabled`                              | Enable startupProbe on Query Coordinator containers                                                        | `false`          |
-| `queryCoord.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                     | `5`              |
-| `queryCoord.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                            | `10`             |
-| `queryCoord.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                           | `5`              |
-| `queryCoord.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                         | `5`              |
-| `queryCoord.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                         | `1`              |
-| `queryCoord.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                        | `{}`             |
-| `queryCoord.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                       | `{}`             |
-| `queryCoord.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                         | `{}`             |
-| `queryCoord.resources.limits`                                  | The resources limits for the data coordinator containers                                                   | `{}`             |
-| `queryCoord.resources.requests`                                | The requested resources for the data coordinator containers                                                | `{}`             |
-| `queryCoord.podSecurityContext.enabled`                        | Enabled Query Coordinator pods' Security Context                                                           | `true`           |
-| `queryCoord.podSecurityContext.fsGroup`                        | Set Query Coordinator pod's Security Context fsGroup                                                       | `1001`           |
-| `queryCoord.podSecurityContext.seccompProfile.type`            | Set Query Coordinator container's Security Context seccomp profile                                         | `RuntimeDefault` |
-| `queryCoord.containerSecurityContext.enabled`                  | Enabled Query Coordinator containers' Security Context                                                     | `true`           |
-| `queryCoord.containerSecurityContext.runAsUser`                | Set Query Coordinator containers' Security Context runAsUser                                               | `1001`           |
-| `queryCoord.containerSecurityContext.runAsNonRoot`             | Set Query Coordinator containers' Security Context runAsNonRoot                                            | `true`           |
-| `queryCoord.containerSecurityContext.readOnlyRootFilesystem`   | Set Query Coordinator containers' Security Context runAsNonRoot                                            | `true`           |
-| `queryCoord.containerSecurityContext.allowPrivilegeEscalation` | Set Query Coordinator container's privilege escalation                                                     | `false`          |
-| `queryCoord.containerSecurityContext.capabilities.drop`        | Set Query Coordinator container's Security Context runAsNonRoot                                            | `["ALL"]`        |
-| `queryCoord.lifecycleHooks`                                    | for the data coordinator container(s) to automate configuration before or after startup                    | `{}`             |
-| `queryCoord.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                             | `""`             |
-| `queryCoord.hostAliases`                                       | data coordinator pods host aliases                                                                         | `[]`             |
-| `queryCoord.podLabels`                                         | Extra labels for data coordinator pods                                                                     | `{}`             |
-| `queryCoord.podAnnotations`                                    | Annotations for data coordinator pods                                                                      | `{}`             |
-| `queryCoord.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard`       | `""`             |
-| `queryCoord.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard`  | `soft`           |
-| `queryCoord.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard` | `""`             |
-| `queryCoord.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data coordinator.affinity` is set                                     | `""`             |
-| `queryCoord.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data coordinator.affinity` is set                                  | `[]`             |
-| `queryCoord.affinity`                                          | Affinity for Query Coordinator pods assignment                                                             | `{}`             |
-| `queryCoord.nodeSelector`                                      | Node labels for Query Coordinator pods assignment                                                          | `{}`             |
-| `queryCoord.tolerations`                                       | Tolerations for Query Coordinator pods assignment                                                          | `[]`             |
-| `queryCoord.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains            | `[]`             |
-| `queryCoord.priorityClassName`                                 | Query Coordinator pods' priorityClassName                                                                  | `""`             |
-| `queryCoord.schedulerName`                                     | Kubernetes pod scheduler registry                                                                          | `""`             |
-| `queryCoord.updateStrategy.type`                               | Query Coordinator statefulset strategy type                                                                | `RollingUpdate`  |
-| `queryCoord.updateStrategy.rollingUpdate`                      | Query Coordinator statefulset rolling update configuration parameters                                      | `{}`             |
-| `queryCoord.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Query Coordinator pod(s)                       | `[]`             |
-| `queryCoord.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Query Coordinator container(s)            | `[]`             |
-| `queryCoord.sidecars`                                          | Add additional sidecar containers to the Query Coordinator pod(s)                                          | `[]`             |
-| `queryCoord.enableDefaultInitContainers`                       | Deploy default init containers                                                                             | `true`           |
-| `queryCoord.initContainers`                                    | Add additional init containers to the Query Coordinator pod(s)                                             | `[]`             |
-| `queryCoord.serviceAccount.create`                             | Enable creation of ServiceAccount for Query Coordinator pods                                               | `false`          |
-| `queryCoord.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                      | `""`             |
-| `queryCoord.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                     | `false`          |
-| `queryCoord.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                       | `{}`             |
-| `queryCoord.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                            | `false`          |
-| `queryCoord.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                             | `1`              |
-| `queryCoord.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                             | `""`             |
-
-### Query Coordinator Autoscaling configuration
-
-| Name                                                 | Description                                                                                                                                                            | Value   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `queryCoord.autoscaling.vpa.enabled`                 | Enable VPA                                                                                                                                                             | `false` |
-| `queryCoord.autoscaling.vpa.annotations`             | Annotations for VPA resource                                                                                                                                           | `{}`    |
-| `queryCoord.autoscaling.vpa.controlledResources`     | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                         | `[]`    |
-| `queryCoord.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
-| `queryCoord.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
-| `queryCoord.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `queryCoord.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
-| `queryCoord.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `queryCoord.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `queryCoord.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `queryCoord.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
-| `queryCoord.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
-
-### Query Coordinator Traffic Exposure Parameters
-
-| Name                                               | Description                                                      | Value       |
-| -------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| `queryCoord.service.type`                          | Query Coordinator service type                                   | `ClusterIP` |
-| `queryCoord.service.ports.grpc`                    | Query Coordinator GRPC service port                              | `19530`     |
-| `queryCoord.service.ports.metrics`                 | Query Coordinator Metrics service port                           | `9091`      |
-| `queryCoord.service.nodePorts.grpc`                | Node port for GRPC                                               | `""`        |
-| `queryCoord.service.nodePorts.metrics`             | Node port for Metrics                                            | `""`        |
-| `queryCoord.service.sessionAffinityConfig`         | Additional settings for the sessionAffinity                      | `{}`        |
-| `queryCoord.service.sessionAffinity`               | Control where client requests go, to the same pod or round-robin | `None`      |
-| `queryCoord.service.clusterIP`                     | Query Coordinator service Cluster IP                             | `""`        |
-| `queryCoord.service.loadBalancerIP`                | Query Coordinator service Load Balancer IP                       | `""`        |
-| `queryCoord.service.loadBalancerSourceRanges`      | Query Coordinator service Load Balancer sources                  | `[]`        |
-| `queryCoord.service.externalTrafficPolicy`         | Query Coordinator service external traffic policy                | `Cluster`   |
-| `queryCoord.service.annotations`                   | Additional custom annotations for Query Coordinator service      | `{}`        |
-| `queryCoord.service.extraPorts`                    | Extra ports to expose in the Query Coordinator service           | `[]`        |
-| `queryCoord.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `false`     |
-| `queryCoord.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
-| `queryCoord.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `queryCoord.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `queryCoord.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
-| `queryCoord.networkPolicy.ingressNSPodMatchLabels` | Pod labels to match to allow traffic from other namespaces       | `{}`        |
-
-### Query Coordinator Metrics Parameters
-
-| Name                                                  | Description                                                                           | Value   |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------- | ------- |
-| `queryCoord.metrics.enabled`                          | Enable metrics                                                                        | `false` |
-| `queryCoord.metrics.annotations`                      | Annotations for the server service in order to scrape metrics                         | `{}`    |
-| `queryCoord.metrics.serviceMonitor.enabled`           | Create ServiceMonitor Resource for scraping metrics using Prometheus Operator         | `false` |
-| `queryCoord.metrics.serviceMonitor.annotations`       | Annotations for the ServiceMonitor Resource                                           | `""`    |
-| `queryCoord.metrics.serviceMonitor.namespace`         | Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)         | `""`    |
-| `queryCoord.metrics.serviceMonitor.interval`          | Interval at which metrics should be scraped.                                          | `""`    |
-| `queryCoord.metrics.serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                               | `""`    |
-| `queryCoord.metrics.serviceMonitor.labels`            | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus | `{}`    |
-| `queryCoord.metrics.serviceMonitor.selector`          | Prometheus instance selector labels                                                   | `{}`    |
-| `queryCoord.metrics.serviceMonitor.relabelings`       | RelabelConfigs to apply to samples before scraping                                    | `[]`    |
-| `queryCoord.metrics.serviceMonitor.metricRelabelings` | MetricRelabelConfigs to apply to samples before ingestion                             | `[]`    |
-| `queryCoord.metrics.serviceMonitor.honorLabels`       | Specify honorLabels parameter to add the scrape endpoint                              | `false` |
-| `queryCoord.metrics.serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in prometheus.     | `""`    |
-
-### Index Coordinator Deployment Parameters
-
-| Name                                                           | Description                                                                                                | Value            |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------- |
-| `indexCoord.enabled`                                           | Enable Index Coordinator deployment                                                                        | `true`           |
-| `indexCoord.extraEnvVars`                                      | Array with extra environment variables to add to data coordinator nodes                                    | `[]`             |
-| `indexCoord.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data coordinator nodes                            | `""`             |
-| `indexCoord.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data coordinator nodes                               | `""`             |
-| `indexCoord.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                 | `""`             |
-| `indexCoord.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                              | `""`             |
-| `indexCoord.extraConfig`                                       | Override configuration                                                                                     | `{}`             |
-| `indexCoord.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the Dashboard                                          | `""`             |
-| `indexCoord.command`                                           | Override default container command (useful when using custom images)                                       | `[]`             |
-| `indexCoord.args`                                              | Override default container args (useful when using custom images)                                          | `[]`             |
-| `indexCoord.replicaCount`                                      | Number of Index Coordinator replicas to deploy                                                             | `1`              |
-| `indexCoord.containerPorts.grpc`                               | GRPC port for Index Coordinator                                                                            | `19530`          |
-| `indexCoord.containerPorts.metrics`                            | Metrics port for Index Coordinator                                                                         | `9091`           |
-| `indexCoord.livenessProbe.enabled`                             | Enable livenessProbe on Index Coordinator nodes                                                            | `true`           |
-| `indexCoord.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                    | `5`              |
-| `indexCoord.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                           | `10`             |
-| `indexCoord.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                          | `5`              |
-| `indexCoord.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                        | `5`              |
-| `indexCoord.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                        | `1`              |
-| `indexCoord.readinessProbe.enabled`                            | Enable readinessProbe on Index Coordinator nodes                                                           | `true`           |
-| `indexCoord.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                   | `5`              |
-| `indexCoord.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                          | `10`             |
-| `indexCoord.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                         | `5`              |
-| `indexCoord.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                       | `5`              |
-| `indexCoord.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                       | `1`              |
-| `indexCoord.startupProbe.enabled`                              | Enable startupProbe on Index Coordinator containers                                                        | `false`          |
-| `indexCoord.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                     | `5`              |
-| `indexCoord.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                            | `10`             |
-| `indexCoord.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                           | `5`              |
-| `indexCoord.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                         | `5`              |
-| `indexCoord.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                         | `1`              |
-| `indexCoord.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                        | `{}`             |
-| `indexCoord.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                       | `{}`             |
-| `indexCoord.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                         | `{}`             |
-| `indexCoord.resources.limits`                                  | The resources limits for the data coordinator containers                                                   | `{}`             |
-| `indexCoord.resources.requests`                                | The requested resources for the data coordinator containers                                                | `{}`             |
-| `indexCoord.podSecurityContext.enabled`                        | Enabled Index Coordinator pods' Security Context                                                           | `true`           |
-| `indexCoord.podSecurityContext.fsGroup`                        | Set Index Coordinator pod's Security Context fsGroup                                                       | `1001`           |
-| `indexCoord.podSecurityContext.seccompProfile.type`            | Set Index Coordinator container's Security Context seccomp profile                                         | `RuntimeDefault` |
-| `indexCoord.containerSecurityContext.enabled`                  | Enabled Index Coordinator containers' Security Context                                                     | `true`           |
-| `indexCoord.containerSecurityContext.runAsUser`                | Set Index Coordinator containers' Security Context runAsUser                                               | `1001`           |
-| `indexCoord.containerSecurityContext.runAsNonRoot`             | Set Index Coordinator containers' Security Context runAsNonRoot                                            | `true`           |
-| `indexCoord.containerSecurityContext.readOnlyRootFilesystem`   | Set Index Coordinator containers' Security Context runAsNonRoot                                            | `true`           |
-| `indexCoord.containerSecurityContext.allowPrivilegeEscalation` | Set Index Coordinator container's privilege escalation                                                     | `false`          |
-| `indexCoord.containerSecurityContext.capabilities.drop`        | Set Index Coordinator container's Security Context runAsNonRoot                                            | `["ALL"]`        |
-| `indexCoord.lifecycleHooks`                                    | for the data coordinator container(s) to automate configuration before or after startup                    | `{}`             |
-| `indexCoord.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                             | `""`             |
-| `indexCoord.hostAliases`                                       | data coordinator pods host aliases                                                                         | `[]`             |
-| `indexCoord.podLabels`                                         | Extra labels for data coordinator pods                                                                     | `{}`             |
-| `indexCoord.podAnnotations`                                    | Annotations for data coordinator pods                                                                      | `{}`             |
-| `indexCoord.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard`       | `""`             |
-| `indexCoord.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard`  | `soft`           |
-| `indexCoord.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data coordinator.affinity` is set. Allowed values: `soft` or `hard` | `""`             |
-| `indexCoord.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data coordinator.affinity` is set                                     | `""`             |
-| `indexCoord.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data coordinator.affinity` is set                                  | `[]`             |
-| `indexCoord.affinity`                                          | Affinity for Index Coordinator pods assignment                                                             | `{}`             |
-| `indexCoord.nodeSelector`                                      | Node labels for Index Coordinator pods assignment                                                          | `{}`             |
-| `indexCoord.tolerations`                                       | Tolerations for Index Coordinator pods assignment                                                          | `[]`             |
-| `indexCoord.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains            | `[]`             |
-| `indexCoord.priorityClassName`                                 | Index Coordinator pods' priorityClassName                                                                  | `""`             |
-| `indexCoord.schedulerName`                                     | Kubernetes pod scheduler registry                                                                          | `""`             |
-| `indexCoord.updateStrategy.type`                               | Index Coordinator statefulset strategy type                                                                | `RollingUpdate`  |
-| `indexCoord.updateStrategy.rollingUpdate`                      | Index Coordinator statefulset rolling update configuration parameters                                      | `{}`             |
-| `indexCoord.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Index Coordinator pod(s)                       | `[]`             |
-| `indexCoord.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Index Coordinator container(s)            | `[]`             |
-| `indexCoord.sidecars`                                          | Add additional sidecar containers to the Index Coordinator pod(s)                                          | `[]`             |
-| `indexCoord.enableDefaultInitContainers`                       | Deploy default init containers                                                                             | `true`           |
-| `indexCoord.initContainers`                                    | Add additional init containers to the Index Coordinator pod(s)                                             | `[]`             |
-| `indexCoord.serviceAccount.create`                             | Enable creation of ServiceAccount for Index Coordinator pods                                               | `false`          |
-| `indexCoord.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                      | `""`             |
-| `indexCoord.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                     | `false`          |
-| `indexCoord.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                       | `{}`             |
-| `indexCoord.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                            | `false`          |
-| `indexCoord.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                             | `1`              |
-| `indexCoord.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                             | `""`             |
-
-### Index Coordinator Autoscaling configuration
-
-| Name                                                 | Description                                                                                                                                                            | Value   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `indexCoord.autoscaling.vpa.enabled`                 | Enable VPA                                                                                                                                                             | `false` |
-| `indexCoord.autoscaling.vpa.annotations`             | Annotations for VPA resource                                                                                                                                           | `{}`    |
-| `indexCoord.autoscaling.vpa.controlledResources`     | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                         | `[]`    |
-| `indexCoord.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
-| `indexCoord.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
-| `indexCoord.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `indexCoord.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
-| `indexCoord.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `indexCoord.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `indexCoord.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `indexCoord.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
-| `indexCoord.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
-
-### Index Coordinator Traffic Exposure Parameters
-
-| Name                                               | Description                                                      | Value       |
-| -------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| `indexCoord.service.type`                          | Index Coordinator service type                                   | `ClusterIP` |
-| `indexCoord.service.ports.grpc`                    | Index Coordinator GRPC service port                              | `19530`     |
-| `indexCoord.service.ports.metrics`                 | Index Coordinator Metrics service port                           | `9091`      |
-| `indexCoord.service.nodePorts.grpc`                | Node port for GRPC                                               | `""`        |
-| `indexCoord.service.nodePorts.metrics`             | Node port for Metrics                                            | `""`        |
-| `indexCoord.service.sessionAffinityConfig`         | Additional settings for the sessionAffinity                      | `{}`        |
-| `indexCoord.service.sessionAffinity`               | Control where client requests go, to the same pod or round-robin | `None`      |
-| `indexCoord.service.clusterIP`                     | Index Coordinator service Cluster IP                             | `""`        |
-| `indexCoord.service.loadBalancerIP`                | Index Coordinator service Load Balancer IP                       | `""`        |
-| `indexCoord.service.loadBalancerSourceRanges`      | Index Coordinator service Load Balancer sources                  | `[]`        |
-| `indexCoord.service.externalTrafficPolicy`         | Index Coordinator service external traffic policy                | `Cluster`   |
-| `indexCoord.service.annotations`                   | Additional custom annotations for Index Coordinator service      | `{}`        |
-| `indexCoord.service.extraPorts`                    | Extra ports to expose in the Index Coordinator service           | `[]`        |
-| `indexCoord.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `false`     |
-| `indexCoord.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
-| `indexCoord.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `indexCoord.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `indexCoord.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
-| `indexCoord.networkPolicy.ingressNSPodMatchLabels` | Pod labels to match to allow traffic from other namespaces       | `{}`        |
-
-### Index Coordinator Metrics Parameters
-
-| Name                                                  | Description                                                                           | Value   |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------- | ------- |
-| `indexCoord.metrics.enabled`                          | Enable metrics                                                                        | `false` |
-| `indexCoord.metrics.annotations`                      | Annotations for the server service in order to scrape metrics                         | `{}`    |
-| `indexCoord.metrics.serviceMonitor.enabled`           | Create ServiceMonitor Resource for scraping metrics using Prometheus Operator         | `false` |
-| `indexCoord.metrics.serviceMonitor.annotations`       | Annotations for the ServiceMonitor Resource                                           | `""`    |
-| `indexCoord.metrics.serviceMonitor.namespace`         | Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)         | `""`    |
-| `indexCoord.metrics.serviceMonitor.interval`          | Interval at which metrics should be scraped.                                          | `""`    |
-| `indexCoord.metrics.serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                               | `""`    |
-| `indexCoord.metrics.serviceMonitor.labels`            | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus | `{}`    |
-| `indexCoord.metrics.serviceMonitor.selector`          | Prometheus instance selector labels                                                   | `{}`    |
-| `indexCoord.metrics.serviceMonitor.relabelings`       | RelabelConfigs to apply to samples before scraping                                    | `[]`    |
-| `indexCoord.metrics.serviceMonitor.metricRelabelings` | MetricRelabelConfigs to apply to samples before ingestion                             | `[]`    |
-| `indexCoord.metrics.serviceMonitor.honorLabels`       | Specify honorLabels parameter to add the scrape endpoint                              | `false` |
-| `indexCoord.metrics.serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in prometheus.     | `""`    |
+| Name                                                   | Description                                                                           | Value   |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------- | ------- |
+| `coordinator.metrics.enabled`                          | Enable metrics                                                                        | `false` |
+| `coordinator.metrics.annotations`                      | Annotations for the server service in order to scrape metrics                         | `{}`    |
+| `coordinator.metrics.serviceMonitor.enabled`           | Create ServiceMonitor Resource for scraping metrics using Prometheus Operator         | `false` |
+| `coordinator.metrics.serviceMonitor.annotations`       | Annotations for the ServiceMonitor Resource                                           | `""`    |
+| `coordinator.metrics.serviceMonitor.namespace`         | Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)         | `""`    |
+| `coordinator.metrics.serviceMonitor.interval`          | Interval at which metrics should be scraped.                                          | `""`    |
+| `coordinator.metrics.serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                               | `""`    |
+| `coordinator.metrics.serviceMonitor.labels`            | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus | `{}`    |
+| `coordinator.metrics.serviceMonitor.selector`          | Prometheus instance selector labels                                                   | `{}`    |
+| `coordinator.metrics.serviceMonitor.relabelings`       | RelabelConfigs to apply to samples before scraping                                    | `[]`    |
+| `coordinator.metrics.serviceMonitor.metricRelabelings` | MetricRelabelConfigs to apply to samples before ingestion                             | `[]`    |
+| `coordinator.metrics.serviceMonitor.honorLabels`       | Specify honorLabels parameter to add the scrape endpoint                              | `false` |
+| `coordinator.metrics.serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in prometheus.     | `""`    |
 
 ### Data Node Deployment Parameters
 
-| Name                                                         | Description                                                                                         | Value            |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ---------------- |
-| `dataNode.enabled`                                           | Enable Data Node deployment                                                                         | `true`           |
-| `dataNode.extraEnvVars`                                      | Array with extra environment variables to add to data node nodes                                    | `[]`             |
-| `dataNode.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data node nodes                            | `""`             |
-| `dataNode.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data node nodes                               | `""`             |
-| `dataNode.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                          | `""`             |
-| `dataNode.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                       | `""`             |
-| `dataNode.extraConfig`                                       | Override configuration                                                                              | `{}`             |
-| `dataNode.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the Dashboard                                   | `""`             |
-| `dataNode.command`                                           | Override default container command (useful when using custom images)                                | `[]`             |
-| `dataNode.args`                                              | Override default container args (useful when using custom images)                                   | `[]`             |
-| `dataNode.replicaCount`                                      | Number of Data Node replicas to deploy                                                              | `1`              |
-| `dataNode.containerPorts.grpc`                               | GRPC port for Data Node                                                                             | `19530`          |
-| `dataNode.containerPorts.metrics`                            | Metrics port for Data Node                                                                          | `9091`           |
-| `dataNode.livenessProbe.enabled`                             | Enable livenessProbe on Data Node nodes                                                             | `true`           |
-| `dataNode.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                             | `5`              |
-| `dataNode.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                    | `10`             |
-| `dataNode.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                   | `5`              |
-| `dataNode.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                 | `5`              |
-| `dataNode.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                 | `1`              |
-| `dataNode.readinessProbe.enabled`                            | Enable readinessProbe on Data Node nodes                                                            | `true`           |
-| `dataNode.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                            | `5`              |
-| `dataNode.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                   | `10`             |
-| `dataNode.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                  | `5`              |
-| `dataNode.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                | `5`              |
-| `dataNode.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                | `1`              |
-| `dataNode.startupProbe.enabled`                              | Enable startupProbe on Data Node containers                                                         | `false`          |
-| `dataNode.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                              | `5`              |
-| `dataNode.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                     | `10`             |
-| `dataNode.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                    | `5`              |
-| `dataNode.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                  | `5`              |
-| `dataNode.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                  | `1`              |
-| `dataNode.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                 | `{}`             |
-| `dataNode.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                | `{}`             |
-| `dataNode.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                  | `{}`             |
-| `dataNode.resources.limits`                                  | The resources limits for the data node containers                                                   | `{}`             |
-| `dataNode.resources.requests`                                | The requested resources for the data node containers                                                | `{}`             |
-| `dataNode.podSecurityContext.enabled`                        | Enabled Data Node pods' Security Context                                                            | `true`           |
-| `dataNode.podSecurityContext.fsGroup`                        | Set Data Node pod's Security Context fsGroup                                                        | `1001`           |
-| `dataNode.podSecurityContext.seccompProfile.type`            | Set Data Node container's Security Context seccomp profile                                          | `RuntimeDefault` |
-| `dataNode.containerSecurityContext.enabled`                  | Enabled Data Node containers' Security Context                                                      | `true`           |
-| `dataNode.containerSecurityContext.runAsUser`                | Set Data Node containers' Security Context runAsUser                                                | `1001`           |
-| `dataNode.containerSecurityContext.runAsNonRoot`             | Set Data Node containers' Security Context runAsNonRoot                                             | `true`           |
-| `dataNode.containerSecurityContext.readOnlyRootFilesystem`   | Set Data Node containers' Security Context runAsNonRoot                                             | `true`           |
-| `dataNode.containerSecurityContext.allowPrivilegeEscalation` | Set Data Node container's privilege escalation                                                      | `false`          |
-| `dataNode.containerSecurityContext.capabilities.drop`        | Set Data Node container's Security Context runAsNonRoot                                             | `["ALL"]`        |
-| `dataNode.lifecycleHooks`                                    | for the data node container(s) to automate configuration before or after startup                    | `{}`             |
-| `dataNode.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                      | `""`             |
-| `dataNode.hostAliases`                                       | data node pods host aliases                                                                         | `[]`             |
-| `dataNode.podLabels`                                         | Extra labels for data node pods                                                                     | `{}`             |
-| `dataNode.podAnnotations`                                    | Annotations for data node pods                                                                      | `{}`             |
-| `dataNode.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`       | `""`             |
-| `dataNode.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`  | `soft`           |
-| `dataNode.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard` | `""`             |
-| `dataNode.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data node.affinity` is set                                     | `""`             |
-| `dataNode.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data node.affinity` is set                                  | `[]`             |
-| `dataNode.affinity`                                          | Affinity for Data Node pods assignment                                                              | `{}`             |
-| `dataNode.nodeSelector`                                      | Node labels for Data Node pods assignment                                                           | `{}`             |
-| `dataNode.tolerations`                                       | Tolerations for Data Node pods assignment                                                           | `[]`             |
-| `dataNode.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains     | `[]`             |
-| `dataNode.priorityClassName`                                 | Data Node pods' priorityClassName                                                                   | `""`             |
-| `dataNode.schedulerName`                                     | Kubernetes pod scheduler registry                                                                   | `""`             |
-| `dataNode.updateStrategy.type`                               | Data Node statefulset strategy type                                                                 | `RollingUpdate`  |
-| `dataNode.updateStrategy.rollingUpdate`                      | Data Node statefulset rolling update configuration parameters                                       | `{}`             |
-| `dataNode.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Data Node pod(s)                        | `[]`             |
-| `dataNode.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Data Node container(s)             | `[]`             |
-| `dataNode.sidecars`                                          | Add additional sidecar containers to the Data Node pod(s)                                           | `[]`             |
-| `dataNode.enableDefaultInitContainers`                       | Deploy default init containers                                                                      | `true`           |
-| `dataNode.initContainers`                                    | Add additional init containers to the Data Node pod(s)                                              | `[]`             |
-| `dataNode.serviceAccount.create`                             | Enable creation of ServiceAccount for Data Node pods                                                | `false`          |
-| `dataNode.serviceAccount.name`                               | The name of the ServiceAccount to use                                                               | `""`             |
-| `dataNode.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                              | `false`          |
-| `dataNode.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                | `{}`             |
-| `dataNode.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                     | `false`          |
-| `dataNode.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                      | `1`              |
-| `dataNode.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                      | `""`             |
+| Name                                                         | Description                                                                                                                                                                                                                         | Value            |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `dataNode.enabled`                                           | Enable Data Node deployment                                                                                                                                                                                                         | `true`           |
+| `dataNode.extraEnvVars`                                      | Array with extra environment variables to add to data node nodes                                                                                                                                                                    | `[]`             |
+| `dataNode.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data node nodes                                                                                                                                                            | `""`             |
+| `dataNode.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data node nodes                                                                                                                                                               | `""`             |
+| `dataNode.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                                                                                                                                          | `""`             |
+| `dataNode.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                                                                                                                                                       | `""`             |
+| `dataNode.extraConfig`                                       | Override configuration                                                                                                                                                                                                              | `{}`             |
+| `dataNode.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration                                                                                                                                                                                     | `""`             |
+| `dataNode.command`                                           | Override default container command (useful when using custom images)                                                                                                                                                                | `[]`             |
+| `dataNode.args`                                              | Override default container args (useful when using custom images)                                                                                                                                                                   | `[]`             |
+| `dataNode.replicaCount`                                      | Number of Data Node replicas to deploy                                                                                                                                                                                              | `1`              |
+| `dataNode.containerPorts.grpc`                               | GRPC port for Data Node                                                                                                                                                                                                             | `19530`          |
+| `dataNode.containerPorts.metrics`                            | Metrics port for Data Node                                                                                                                                                                                                          | `9091`           |
+| `dataNode.livenessProbe.enabled`                             | Enable livenessProbe on Data Node nodes                                                                                                                                                                                             | `true`           |
+| `dataNode.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                             | `5`              |
+| `dataNode.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                                    | `10`             |
+| `dataNode.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                                   | `5`              |
+| `dataNode.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                                 | `5`              |
+| `dataNode.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                                 | `1`              |
+| `dataNode.readinessProbe.enabled`                            | Enable readinessProbe on Data Node nodes                                                                                                                                                                                            | `true`           |
+| `dataNode.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                                            | `5`              |
+| `dataNode.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                                   | `10`             |
+| `dataNode.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                                  | `5`              |
+| `dataNode.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                                | `5`              |
+| `dataNode.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                                | `1`              |
+| `dataNode.startupProbe.enabled`                              | Enable startupProbe on Data Node containers                                                                                                                                                                                         | `false`          |
+| `dataNode.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                              | `5`              |
+| `dataNode.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                                     | `10`             |
+| `dataNode.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                                    | `5`              |
+| `dataNode.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                                  | `5`              |
+| `dataNode.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                                  | `1`              |
+| `dataNode.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                                                                                                                                                 | `{}`             |
+| `dataNode.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                                                                                                                                                | `{}`             |
+| `dataNode.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                                                                                                                                                  | `{}`             |
+| `dataNode.resourcesPreset`                                   | Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if dataNode.resources is set (dataNode.resources is recommended for production). | `micro`          |
+| `dataNode.resources`                                         | Set container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                   | `{}`             |
+| `dataNode.podSecurityContext.enabled`                        | Enabled Data Node pods' Security Context                                                                                                                                                                                            | `true`           |
+| `dataNode.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy                                                                                                                                                                                                  | `Always`         |
+| `dataNode.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface                                                                                                                                                                                      | `[]`             |
+| `dataNode.podSecurityContext.supplementalGroups`             | Set filesystem extra groups                                                                                                                                                                                                         | `[]`             |
+| `dataNode.podSecurityContext.fsGroup`                        | Set Data Node pod's Security Context fsGroup                                                                                                                                                                                        | `1001`           |
+| `dataNode.containerSecurityContext.enabled`                  | Enabled containers' Security Context                                                                                                                                                                                                | `true`           |
+| `dataNode.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                                                                                                                                    | `{}`             |
+| `dataNode.containerSecurityContext.runAsUser`                | Set containers' Security Context runAsUser                                                                                                                                                                                          | `1001`           |
+| `dataNode.containerSecurityContext.runAsGroup`               | Set containers' Security Context runAsGroup                                                                                                                                                                                         | `1001`           |
+| `dataNode.containerSecurityContext.runAsNonRoot`             | Set container's Security Context runAsNonRoot                                                                                                                                                                                       | `true`           |
+| `dataNode.containerSecurityContext.privileged`               | Set container's Security Context privileged                                                                                                                                                                                         | `false`          |
+| `dataNode.containerSecurityContext.readOnlyRootFilesystem`   | Set container's Security Context readOnlyRootFilesystem                                                                                                                                                                             | `true`           |
+| `dataNode.containerSecurityContext.allowPrivilegeEscalation` | Set container's Security Context allowPrivilegeEscalation                                                                                                                                                                           | `false`          |
+| `dataNode.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                                                                                                                                  | `["ALL"]`        |
+| `dataNode.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                                                                                                                                    | `RuntimeDefault` |
+| `dataNode.lifecycleHooks`                                    | for the data node container(s) to automate configuration before or after startup                                                                                                                                                    | `{}`             |
+| `dataNode.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                                                                                                                                                      | `""`             |
+| `dataNode.automountServiceAccountToken`                      | Mount Service Account token in pod                                                                                                                                                                                                  | `false`          |
+| `dataNode.hostAliases`                                       | data node pods host aliases                                                                                                                                                                                                         | `[]`             |
+| `dataNode.podLabels`                                         | Extra labels for data node pods                                                                                                                                                                                                     | `{}`             |
+| `dataNode.podAnnotations`                                    | Annotations for data node pods                                                                                                                                                                                                      | `{}`             |
+| `dataNode.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                       | `""`             |
+| `dataNode.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                  | `soft`           |
+| `dataNode.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                 | `""`             |
+| `dataNode.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data node.affinity` is set                                                                                                                                                                     | `""`             |
+| `dataNode.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data node.affinity` is set                                                                                                                                                                  | `[]`             |
+| `dataNode.affinity`                                          | Affinity for Data Node pods assignment                                                                                                                                                                                              | `{}`             |
+| `dataNode.nodeSelector`                                      | Node labels for Data Node pods assignment                                                                                                                                                                                           | `{}`             |
+| `dataNode.tolerations`                                       | Tolerations for Data Node pods assignment                                                                                                                                                                                           | `[]`             |
+| `dataNode.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains                                                                                                                                     | `[]`             |
+| `dataNode.priorityClassName`                                 | Data Node pods' priorityClassName                                                                                                                                                                                                   | `""`             |
+| `dataNode.schedulerName`                                     | Kubernetes pod scheduler registry                                                                                                                                                                                                   | `""`             |
+| `dataNode.updateStrategy.type`                               | Data Node statefulset strategy type                                                                                                                                                                                                 | `RollingUpdate`  |
+| `dataNode.updateStrategy.rollingUpdate`                      | Data Node statefulset rolling update configuration parameters                                                                                                                                                                       | `{}`             |
+| `dataNode.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Data Node pod(s)                                                                                                                                                        | `[]`             |
+| `dataNode.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Data Node container(s)                                                                                                                                             | `[]`             |
+| `dataNode.sidecars`                                          | Add additional sidecar containers to the Data Node pod(s)                                                                                                                                                                           | `[]`             |
+| `dataNode.enableDefaultInitContainers`                       | Deploy default init containers                                                                                                                                                                                                      | `true`           |
+| `dataNode.initContainers`                                    | Add additional init containers to the Data Node pod(s)                                                                                                                                                                              | `[]`             |
+| `dataNode.serviceAccount.create`                             | Enable creation of ServiceAccount for Data Node pods                                                                                                                                                                                | `true`           |
+| `dataNode.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                                                                                                                                               | `""`             |
+| `dataNode.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                                                                                                                                              | `false`          |
+| `dataNode.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                                                                                                                                                | `{}`             |
+| `dataNode.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                                                                                                                                                     | `true`           |
+| `dataNode.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                                      | `{}`             |
+| `dataNode.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `dataNode.pdb.minAvailable` and `dataNode.pdb.maxUnavailable` are empty.                                                                    | `{}`             |
 
 ### Data Node Autoscaling configuration
 
@@ -776,10 +640,10 @@ The command removes all the Kubernetes components associated with the chart and 
 | `dataNode.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
 | `dataNode.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
 | `dataNode.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `dataNode.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
+| `dataNode.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data node                                                                                                                                        | `false` |
 | `dataNode.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `dataNode.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `dataNode.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
+| `dataNode.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data node replicas                                                                                                                            | `""`    |
+| `dataNode.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data node replicas                                                                                                                            | `""`    |
 | `dataNode.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
 | `dataNode.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
 
@@ -800,8 +664,9 @@ The command removes all the Kubernetes components associated with the chart and 
 | `dataNode.service.externalTrafficPolicy`         | Data Node service external traffic policy                        | `Cluster`   |
 | `dataNode.service.annotations`                   | Additional custom annotations for Data Node service              | `{}`        |
 | `dataNode.service.extraPorts`                    | Extra ports to expose in the Data Node service                   | `[]`        |
-| `dataNode.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `false`     |
+| `dataNode.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `true`      |
 | `dataNode.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
+| `dataNode.networkPolicy.allowExternalEgress`     | Allow the pod to access any range of port and all destinations.  | `true`      |
 | `dataNode.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
 | `dataNode.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
 | `dataNode.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
@@ -827,83 +692,90 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Query Node Deployment Parameters
 
-| Name                                                          | Description                                                                                         | Value            |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------- |
-| `queryNode.enabled`                                           | Enable Query Node deployment                                                                        | `true`           |
-| `queryNode.extraEnvVars`                                      | Array with extra environment variables to add to data node nodes                                    | `[]`             |
-| `queryNode.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data node nodes                            | `""`             |
-| `queryNode.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data node nodes                               | `""`             |
-| `queryNode.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                          | `""`             |
-| `queryNode.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                       | `""`             |
-| `queryNode.extraConfig`                                       | Override configuration                                                                              | `{}`             |
-| `queryNode.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the Dashboard                                   | `""`             |
-| `queryNode.command`                                           | Override default container command (useful when using custom images)                                | `[]`             |
-| `queryNode.args`                                              | Override default container args (useful when using custom images)                                   | `[]`             |
-| `queryNode.replicaCount`                                      | Number of Query Node replicas to deploy                                                             | `1`              |
-| `queryNode.containerPorts.grpc`                               | GRPC port for Query Node                                                                            | `19530`          |
-| `queryNode.containerPorts.metrics`                            | Metrics port for Query Node                                                                         | `9091`           |
-| `queryNode.livenessProbe.enabled`                             | Enable livenessProbe on Query Node nodes                                                            | `true`           |
-| `queryNode.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                             | `5`              |
-| `queryNode.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                    | `10`             |
-| `queryNode.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                   | `5`              |
-| `queryNode.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                 | `5`              |
-| `queryNode.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                 | `1`              |
-| `queryNode.readinessProbe.enabled`                            | Enable readinessProbe on Query Node nodes                                                           | `true`           |
-| `queryNode.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                            | `5`              |
-| `queryNode.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                   | `10`             |
-| `queryNode.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                  | `5`              |
-| `queryNode.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                | `5`              |
-| `queryNode.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                | `1`              |
-| `queryNode.startupProbe.enabled`                              | Enable startupProbe on Query Node containers                                                        | `false`          |
-| `queryNode.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                              | `5`              |
-| `queryNode.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                     | `10`             |
-| `queryNode.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                    | `5`              |
-| `queryNode.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                  | `5`              |
-| `queryNode.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                  | `1`              |
-| `queryNode.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                 | `{}`             |
-| `queryNode.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                | `{}`             |
-| `queryNode.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                  | `{}`             |
-| `queryNode.resources.limits`                                  | The resources limits for the data node containers                                                   | `{}`             |
-| `queryNode.resources.requests`                                | The requested resources for the data node containers                                                | `{}`             |
-| `queryNode.podSecurityContext.enabled`                        | Enabled Query Node pods' Security Context                                                           | `true`           |
-| `queryNode.podSecurityContext.fsGroup`                        | Set Query Node pod's Security Context fsGroup                                                       | `1001`           |
-| `queryNode.podSecurityContext.seccompProfile.type`            | Set Query Node container's Security Context seccomp profile                                         | `RuntimeDefault` |
-| `queryNode.containerSecurityContext.enabled`                  | Enabled Query Node containers' Security Context                                                     | `true`           |
-| `queryNode.containerSecurityContext.runAsUser`                | Set Query Node containers' Security Context runAsUser                                               | `1001`           |
-| `queryNode.containerSecurityContext.runAsNonRoot`             | Set Query Node containers' Security Context runAsNonRoot                                            | `true`           |
-| `queryNode.containerSecurityContext.readOnlyRootFilesystem`   | Set Query Node containers' Security Context runAsNonRoot                                            | `true`           |
-| `queryNode.containerSecurityContext.allowPrivilegeEscalation` | Set Query Node container's privilege escalation                                                     | `false`          |
-| `queryNode.containerSecurityContext.capabilities.drop`        | Set Query Node container's Security Context runAsNonRoot                                            | `["ALL"]`        |
-| `queryNode.lifecycleHooks`                                    | for the data node container(s) to automate configuration before or after startup                    | `{}`             |
-| `queryNode.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                      | `""`             |
-| `queryNode.hostAliases`                                       | data node pods host aliases                                                                         | `[]`             |
-| `queryNode.podLabels`                                         | Extra labels for data node pods                                                                     | `{}`             |
-| `queryNode.podAnnotations`                                    | Annotations for data node pods                                                                      | `{}`             |
-| `queryNode.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`       | `""`             |
-| `queryNode.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`  | `soft`           |
-| `queryNode.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard` | `""`             |
-| `queryNode.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data node.affinity` is set                                     | `""`             |
-| `queryNode.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data node.affinity` is set                                  | `[]`             |
-| `queryNode.affinity`                                          | Affinity for Query Node pods assignment                                                             | `{}`             |
-| `queryNode.nodeSelector`                                      | Node labels for Query Node pods assignment                                                          | `{}`             |
-| `queryNode.tolerations`                                       | Tolerations for Query Node pods assignment                                                          | `[]`             |
-| `queryNode.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains     | `[]`             |
-| `queryNode.priorityClassName`                                 | Query Node pods' priorityClassName                                                                  | `""`             |
-| `queryNode.schedulerName`                                     | Kubernetes pod scheduler registry                                                                   | `""`             |
-| `queryNode.updateStrategy.type`                               | Query Node statefulset strategy type                                                                | `RollingUpdate`  |
-| `queryNode.updateStrategy.rollingUpdate`                      | Query Node statefulset rolling update configuration parameters                                      | `{}`             |
-| `queryNode.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Query Node pod(s)                       | `[]`             |
-| `queryNode.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Query Node container(s)            | `[]`             |
-| `queryNode.sidecars`                                          | Add additional sidecar containers to the Query Node pod(s)                                          | `[]`             |
-| `queryNode.enableDefaultInitContainers`                       | Deploy default init containers                                                                      | `true`           |
-| `queryNode.initContainers`                                    | Add additional init containers to the Query Node pod(s)                                             | `[]`             |
-| `queryNode.serviceAccount.create`                             | Enable creation of ServiceAccount for Query Node pods                                               | `false`          |
-| `queryNode.serviceAccount.name`                               | The name of the ServiceAccount to use                                                               | `""`             |
-| `queryNode.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                              | `false`          |
-| `queryNode.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                | `{}`             |
-| `queryNode.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                     | `false`          |
-| `queryNode.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                      | `1`              |
-| `queryNode.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                      | `""`             |
+| Name                                                          | Description                                                                                                                                                                                                                           | Value            |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `queryNode.enabled`                                           | Enable Query Node deployment                                                                                                                                                                                                          | `true`           |
+| `queryNode.extraEnvVars`                                      | Array with extra environment variables to add to data node nodes                                                                                                                                                                      | `[]`             |
+| `queryNode.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data node nodes                                                                                                                                                              | `""`             |
+| `queryNode.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data node nodes                                                                                                                                                                 | `""`             |
+| `queryNode.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                                                                                                                                            | `""`             |
+| `queryNode.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                                                                                                                                                         | `""`             |
+| `queryNode.extraConfig`                                       | Override configuration                                                                                                                                                                                                                | `{}`             |
+| `queryNode.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration                                                                                                                                                                                       | `""`             |
+| `queryNode.command`                                           | Override default container command (useful when using custom images)                                                                                                                                                                  | `[]`             |
+| `queryNode.args`                                              | Override default container args (useful when using custom images)                                                                                                                                                                     | `[]`             |
+| `queryNode.replicaCount`                                      | Number of Query Node replicas to deploy                                                                                                                                                                                               | `1`              |
+| `queryNode.containerPorts.grpc`                               | GRPC port for Query Node                                                                                                                                                                                                              | `19530`          |
+| `queryNode.containerPorts.metrics`                            | Metrics port for Query Node                                                                                                                                                                                                           | `9091`           |
+| `queryNode.livenessProbe.enabled`                             | Enable livenessProbe on Query Node nodes                                                                                                                                                                                              | `true`           |
+| `queryNode.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                               | `5`              |
+| `queryNode.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                                      | `10`             |
+| `queryNode.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                                     | `5`              |
+| `queryNode.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                                   | `5`              |
+| `queryNode.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                                   | `1`              |
+| `queryNode.readinessProbe.enabled`                            | Enable readinessProbe on Query Node nodes                                                                                                                                                                                             | `true`           |
+| `queryNode.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                                              | `5`              |
+| `queryNode.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                                     | `10`             |
+| `queryNode.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                                    | `5`              |
+| `queryNode.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                                  | `5`              |
+| `queryNode.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                                  | `1`              |
+| `queryNode.startupProbe.enabled`                              | Enable startupProbe on Query Node containers                                                                                                                                                                                          | `false`          |
+| `queryNode.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                                | `5`              |
+| `queryNode.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                                       | `10`             |
+| `queryNode.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                                      | `5`              |
+| `queryNode.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                                    | `5`              |
+| `queryNode.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                                    | `1`              |
+| `queryNode.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                                                                                                                                                   | `{}`             |
+| `queryNode.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                                                                                                                                                  | `{}`             |
+| `queryNode.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                                                                                                                                                    | `{}`             |
+| `queryNode.resourcesPreset`                                   | Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if queryNode.resources is set (queryNode.resources is recommended for production). | `micro`          |
+| `queryNode.resources`                                         | Set container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                     | `{}`             |
+| `queryNode.podSecurityContext.enabled`                        | Enabled Query Node pods' Security Context                                                                                                                                                                                             | `true`           |
+| `queryNode.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy                                                                                                                                                                                                    | `Always`         |
+| `queryNode.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface                                                                                                                                                                                        | `[]`             |
+| `queryNode.podSecurityContext.supplementalGroups`             | Set filesystem extra groups                                                                                                                                                                                                           | `[]`             |
+| `queryNode.podSecurityContext.fsGroup`                        | Set Query Node pod's Security Context fsGroup                                                                                                                                                                                         | `1001`           |
+| `queryNode.containerSecurityContext.enabled`                  | Enabled containers' Security Context                                                                                                                                                                                                  | `true`           |
+| `queryNode.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                                                                                                                                      | `{}`             |
+| `queryNode.containerSecurityContext.runAsUser`                | Set containers' Security Context runAsUser                                                                                                                                                                                            | `1001`           |
+| `queryNode.containerSecurityContext.runAsGroup`               | Set containers' Security Context runAsGroup                                                                                                                                                                                           | `1001`           |
+| `queryNode.containerSecurityContext.runAsNonRoot`             | Set container's Security Context runAsNonRoot                                                                                                                                                                                         | `true`           |
+| `queryNode.containerSecurityContext.privileged`               | Set container's Security Context privileged                                                                                                                                                                                           | `false`          |
+| `queryNode.containerSecurityContext.readOnlyRootFilesystem`   | Set container's Security Context readOnlyRootFilesystem                                                                                                                                                                               | `true`           |
+| `queryNode.containerSecurityContext.allowPrivilegeEscalation` | Set container's Security Context allowPrivilegeEscalation                                                                                                                                                                             | `false`          |
+| `queryNode.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                                                                                                                                    | `["ALL"]`        |
+| `queryNode.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                                                                                                                                      | `RuntimeDefault` |
+| `queryNode.lifecycleHooks`                                    | for the data node container(s) to automate configuration before or after startup                                                                                                                                                      | `{}`             |
+| `queryNode.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                                                                                                                                                        | `""`             |
+| `queryNode.automountServiceAccountToken`                      | Mount Service Account token in pod                                                                                                                                                                                                    | `false`          |
+| `queryNode.hostAliases`                                       | data node pods host aliases                                                                                                                                                                                                           | `[]`             |
+| `queryNode.podLabels`                                         | Extra labels for data node pods                                                                                                                                                                                                       | `{}`             |
+| `queryNode.podAnnotations`                                    | Annotations for data node pods                                                                                                                                                                                                        | `{}`             |
+| `queryNode.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                         | `""`             |
+| `queryNode.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                    | `soft`           |
+| `queryNode.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                   | `""`             |
+| `queryNode.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data node.affinity` is set                                                                                                                                                                       | `""`             |
+| `queryNode.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data node.affinity` is set                                                                                                                                                                    | `[]`             |
+| `queryNode.affinity`                                          | Affinity for Query Node pods assignment                                                                                                                                                                                               | `{}`             |
+| `queryNode.nodeSelector`                                      | Node labels for Query Node pods assignment                                                                                                                                                                                            | `{}`             |
+| `queryNode.tolerations`                                       | Tolerations for Query Node pods assignment                                                                                                                                                                                            | `[]`             |
+| `queryNode.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains                                                                                                                                       | `[]`             |
+| `queryNode.priorityClassName`                                 | Query Node pods' priorityClassName                                                                                                                                                                                                    | `""`             |
+| `queryNode.schedulerName`                                     | Kubernetes pod scheduler registry                                                                                                                                                                                                     | `""`             |
+| `queryNode.updateStrategy.type`                               | Query Node statefulset strategy type                                                                                                                                                                                                  | `RollingUpdate`  |
+| `queryNode.updateStrategy.rollingUpdate`                      | Query Node statefulset rolling update configuration parameters                                                                                                                                                                        | `{}`             |
+| `queryNode.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Query Node pod(s)                                                                                                                                                         | `[]`             |
+| `queryNode.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Query Node container(s)                                                                                                                                              | `[]`             |
+| `queryNode.sidecars`                                          | Add additional sidecar containers to the Query Node pod(s)                                                                                                                                                                            | `[]`             |
+| `queryNode.enableDefaultInitContainers`                       | Deploy default init containers                                                                                                                                                                                                        | `true`           |
+| `queryNode.initContainers`                                    | Add additional init containers to the Query Node pod(s)                                                                                                                                                                               | `[]`             |
+| `queryNode.serviceAccount.create`                             | Enable creation of ServiceAccount for Query Node pods                                                                                                                                                                                 | `true`           |
+| `queryNode.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                                                                                                                                                 | `""`             |
+| `queryNode.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                                                                                                                                                | `false`          |
+| `queryNode.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                                                                                                                                                  | `{}`             |
+| `queryNode.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                                                                                                                                                       | `true`           |
+| `queryNode.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                                        | `{}`             |
+| `queryNode.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `queryNode.pdb.minAvailable` and `queryNode.pdb.maxUnavailable` are empty.                                                                    | `{}`             |
 
 ### Query Node Autoscaling configuration
 
@@ -915,10 +787,10 @@ The command removes all the Kubernetes components associated with the chart and 
 | `queryNode.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
 | `queryNode.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
 | `queryNode.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `queryNode.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
+| `queryNode.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Query node                                                                                                                                       | `false` |
 | `queryNode.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `queryNode.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `queryNode.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
+| `queryNode.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Query node replicas                                                                                                                           | `""`    |
+| `queryNode.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Query node replicas                                                                                                                           | `""`    |
 | `queryNode.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
 | `queryNode.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
 
@@ -939,8 +811,9 @@ The command removes all the Kubernetes components associated with the chart and 
 | `queryNode.service.externalTrafficPolicy`         | Query Node service external traffic policy                       | `Cluster`   |
 | `queryNode.service.annotations`                   | Additional custom annotations for Query Node service             | `{}`        |
 | `queryNode.service.extraPorts`                    | Extra ports to expose in the Query Node service                  | `[]`        |
-| `queryNode.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `false`     |
+| `queryNode.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `true`      |
 | `queryNode.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
+| `queryNode.networkPolicy.allowExternalEgress`     | Allow the pod to access any range of port and all destinations.  | `true`      |
 | `queryNode.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
 | `queryNode.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
 | `queryNode.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
@@ -964,225 +837,251 @@ The command removes all the Kubernetes components associated with the chart and 
 | `queryNode.metrics.serviceMonitor.honorLabels`       | Specify honorLabels parameter to add the scrape endpoint                              | `false` |
 | `queryNode.metrics.serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in prometheus.     | `""`    |
 
-### Index Node Deployment Parameters
+### Streaming Node Deployment Parameters
 
-| Name                                                          | Description                                                                                         | Value            |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------- |
-| `indexNode.enabled`                                           | Enable Index Node deployment                                                                        | `true`           |
-| `indexNode.extraEnvVars`                                      | Array with extra environment variables to add to data node nodes                                    | `[]`             |
-| `indexNode.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data node nodes                            | `""`             |
-| `indexNode.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data node nodes                               | `""`             |
-| `indexNode.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                          | `""`             |
-| `indexNode.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                       | `""`             |
-| `indexNode.extraConfig`                                       | Override configuration                                                                              | `{}`             |
-| `indexNode.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the Dashboard                                   | `""`             |
-| `indexNode.command`                                           | Override default container command (useful when using custom images)                                | `[]`             |
-| `indexNode.args`                                              | Override default container args (useful when using custom images)                                   | `[]`             |
-| `indexNode.replicaCount`                                      | Number of Index Node replicas to deploy                                                             | `1`              |
-| `indexNode.containerPorts.grpc`                               | GRPC port for Index Node                                                                            | `19530`          |
-| `indexNode.containerPorts.metrics`                            | Metrics port for Index Node                                                                         | `9091`           |
-| `indexNode.livenessProbe.enabled`                             | Enable livenessProbe on Index Node nodes                                                            | `true`           |
-| `indexNode.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                             | `5`              |
-| `indexNode.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                    | `10`             |
-| `indexNode.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                   | `5`              |
-| `indexNode.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                 | `5`              |
-| `indexNode.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                 | `1`              |
-| `indexNode.readinessProbe.enabled`                            | Enable readinessProbe on Index Node nodes                                                           | `true`           |
-| `indexNode.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                            | `5`              |
-| `indexNode.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                   | `10`             |
-| `indexNode.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                  | `5`              |
-| `indexNode.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                | `5`              |
-| `indexNode.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                | `1`              |
-| `indexNode.startupProbe.enabled`                              | Enable startupProbe on Index Node containers                                                        | `false`          |
-| `indexNode.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                              | `5`              |
-| `indexNode.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                     | `10`             |
-| `indexNode.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                    | `5`              |
-| `indexNode.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                  | `5`              |
-| `indexNode.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                  | `1`              |
-| `indexNode.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                 | `{}`             |
-| `indexNode.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                | `{}`             |
-| `indexNode.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                  | `{}`             |
-| `indexNode.resources.limits`                                  | The resources limits for the data node containers                                                   | `{}`             |
-| `indexNode.resources.requests`                                | The requested resources for the data node containers                                                | `{}`             |
-| `indexNode.podSecurityContext.enabled`                        | Enabled Index Node pods' Security Context                                                           | `true`           |
-| `indexNode.podSecurityContext.fsGroup`                        | Set Index Node pod's Security Context fsGroup                                                       | `1001`           |
-| `indexNode.podSecurityContext.seccompProfile.type`            | Set Index Node container's Security Context seccomp profile                                         | `RuntimeDefault` |
-| `indexNode.containerSecurityContext.enabled`                  | Enabled Index Node containers' Security Context                                                     | `true`           |
-| `indexNode.containerSecurityContext.runAsUser`                | Set Index Node containers' Security Context runAsUser                                               | `1001`           |
-| `indexNode.containerSecurityContext.runAsNonRoot`             | Set Index Node containers' Security Context runAsNonRoot                                            | `true`           |
-| `indexNode.containerSecurityContext.readOnlyRootFilesystem`   | Set Index Node containers' Security Context runAsNonRoot                                            | `true`           |
-| `indexNode.containerSecurityContext.allowPrivilegeEscalation` | Set Index Node container's privilege escalation                                                     | `false`          |
-| `indexNode.containerSecurityContext.capabilities.drop`        | Set Index Node container's Security Context runAsNonRoot                                            | `["ALL"]`        |
-| `indexNode.lifecycleHooks`                                    | for the data node container(s) to automate configuration before or after startup                    | `{}`             |
-| `indexNode.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                      | `""`             |
-| `indexNode.hostAliases`                                       | data node pods host aliases                                                                         | `[]`             |
-| `indexNode.podLabels`                                         | Extra labels for data node pods                                                                     | `{}`             |
-| `indexNode.podAnnotations`                                    | Annotations for data node pods                                                                      | `{}`             |
-| `indexNode.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`       | `""`             |
-| `indexNode.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`  | `soft`           |
-| `indexNode.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard` | `""`             |
-| `indexNode.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data node.affinity` is set                                     | `""`             |
-| `indexNode.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data node.affinity` is set                                  | `[]`             |
-| `indexNode.affinity`                                          | Affinity for Index Node pods assignment                                                             | `{}`             |
-| `indexNode.nodeSelector`                                      | Node labels for Index Node pods assignment                                                          | `{}`             |
-| `indexNode.tolerations`                                       | Tolerations for Index Node pods assignment                                                          | `[]`             |
-| `indexNode.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains     | `[]`             |
-| `indexNode.priorityClassName`                                 | Index Node pods' priorityClassName                                                                  | `""`             |
-| `indexNode.schedulerName`                                     | Kubernetes pod scheduler registry                                                                   | `""`             |
-| `indexNode.updateStrategy.type`                               | Index Node statefulset strategy type                                                                | `RollingUpdate`  |
-| `indexNode.updateStrategy.rollingUpdate`                      | Index Node statefulset rolling update configuration parameters                                      | `{}`             |
-| `indexNode.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Index Node pod(s)                       | `[]`             |
-| `indexNode.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Index Node container(s)            | `[]`             |
-| `indexNode.sidecars`                                          | Add additional sidecar containers to the Index Node pod(s)                                          | `[]`             |
-| `indexNode.enableDefaultInitContainers`                       | Deploy default init containers                                                                      | `true`           |
-| `indexNode.initContainers`                                    | Add additional init containers to the Index Node pod(s)                                             | `[]`             |
-| `indexNode.serviceAccount.create`                             | Enable creation of ServiceAccount for Index Node pods                                               | `false`          |
-| `indexNode.serviceAccount.name`                               | The name of the ServiceAccount to use                                                               | `""`             |
-| `indexNode.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                              | `false`          |
-| `indexNode.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                | `{}`             |
-| `indexNode.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                     | `false`          |
-| `indexNode.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                      | `1`              |
-| `indexNode.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                      | `""`             |
+| Name                                                              | Description                                                                                                                                                                                                                                   | Value            |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `streamingNode.enabled`                                           | Enable Streaming Node deployment                                                                                                                                                                                                              | `true`           |
+| `streamingNode.extraEnvVars`                                      | Array with extra environment variables to add to data node nodes                                                                                                                                                                              | `[]`             |
+| `streamingNode.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for data node nodes                                                                                                                                                                      | `""`             |
+| `streamingNode.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for data node nodes                                                                                                                                                                         | `""`             |
+| `streamingNode.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                                                                                                                                                    | `""`             |
+| `streamingNode.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                                                                                                                                                                 | `""`             |
+| `streamingNode.extraConfig`                                       | Override configuration                                                                                                                                                                                                                        | `{}`             |
+| `streamingNode.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration                                                                                                                                                                                               | `""`             |
+| `streamingNode.command`                                           | Override default container command (useful when using custom images)                                                                                                                                                                          | `[]`             |
+| `streamingNode.args`                                              | Override default container args (useful when using custom images)                                                                                                                                                                             | `[]`             |
+| `streamingNode.replicaCount`                                      | Number of Streaming Node replicas to deploy                                                                                                                                                                                                   | `1`              |
+| `streamingNode.containerPorts.grpc`                               | GRPC port for Streaming Node                                                                                                                                                                                                                  | `19530`          |
+| `streamingNode.containerPorts.metrics`                            | Metrics port for Streaming Node                                                                                                                                                                                                               | `9091`           |
+| `streamingNode.livenessProbe.enabled`                             | Enable livenessProbe on Streaming Node nodes                                                                                                                                                                                                  | `true`           |
+| `streamingNode.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                                       | `5`              |
+| `streamingNode.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                                              | `10`             |
+| `streamingNode.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                                             | `5`              |
+| `streamingNode.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                                           | `5`              |
+| `streamingNode.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                                           | `1`              |
+| `streamingNode.readinessProbe.enabled`                            | Enable readinessProbe on Streaming Node nodes                                                                                                                                                                                                 | `true`           |
+| `streamingNode.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                                                      | `5`              |
+| `streamingNode.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                                             | `10`             |
+| `streamingNode.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                                            | `5`              |
+| `streamingNode.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                                          | `5`              |
+| `streamingNode.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                                          | `1`              |
+| `streamingNode.startupProbe.enabled`                              | Enable startupProbe on Streaming Node containers                                                                                                                                                                                              | `false`          |
+| `streamingNode.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                                        | `5`              |
+| `streamingNode.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                                               | `10`             |
+| `streamingNode.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                                              | `5`              |
+| `streamingNode.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                                            | `5`              |
+| `streamingNode.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                                            | `1`              |
+| `streamingNode.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                                                                                                                                                           | `{}`             |
+| `streamingNode.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                                                                                                                                                          | `{}`             |
+| `streamingNode.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                                                                                                                                                            | `{}`             |
+| `streamingNode.resourcesPreset`                                   | Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if streamingNode.resources is set (streamingNode.resources is recommended for production). | `micro`          |
+| `streamingNode.resources`                                         | Set container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                                             | `{}`             |
+| `streamingNode.podSecurityContext.enabled`                        | Enabled Streaming Node pods' Security Context                                                                                                                                                                                                 | `true`           |
+| `streamingNode.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy                                                                                                                                                                                                            | `Always`         |
+| `streamingNode.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface                                                                                                                                                                                                | `[]`             |
+| `streamingNode.podSecurityContext.supplementalGroups`             | Set filesystem extra groups                                                                                                                                                                                                                   | `[]`             |
+| `streamingNode.podSecurityContext.fsGroup`                        | Set Streaming Node pod's Security Context fsGroup                                                                                                                                                                                             | `1001`           |
+| `streamingNode.containerSecurityContext.enabled`                  | Enabled containers' Security Context                                                                                                                                                                                                          | `true`           |
+| `streamingNode.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                                                                                                                                              | `{}`             |
+| `streamingNode.containerSecurityContext.runAsUser`                | Set containers' Security Context runAsUser                                                                                                                                                                                                    | `1001`           |
+| `streamingNode.containerSecurityContext.runAsGroup`               | Set containers' Security Context runAsGroup                                                                                                                                                                                                   | `1001`           |
+| `streamingNode.containerSecurityContext.runAsNonRoot`             | Set container's Security Context runAsNonRoot                                                                                                                                                                                                 | `true`           |
+| `streamingNode.containerSecurityContext.privileged`               | Set container's Security Context privileged                                                                                                                                                                                                   | `false`          |
+| `streamingNode.containerSecurityContext.readOnlyRootFilesystem`   | Set container's Security Context readOnlyRootFilesystem                                                                                                                                                                                       | `true`           |
+| `streamingNode.containerSecurityContext.allowPrivilegeEscalation` | Set container's Security Context allowPrivilegeEscalation                                                                                                                                                                                     | `false`          |
+| `streamingNode.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                                                                                                                                            | `["ALL"]`        |
+| `streamingNode.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                                                                                                                                              | `RuntimeDefault` |
+| `streamingNode.lifecycleHooks`                                    | for the data node container(s) to automate configuration before or after startup                                                                                                                                                              | `{}`             |
+| `streamingNode.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                                                                                                                                                                | `""`             |
+| `streamingNode.automountServiceAccountToken`                      | Mount Service Account token in pod                                                                                                                                                                                                            | `false`          |
+| `streamingNode.hostAliases`                                       | data node pods host aliases                                                                                                                                                                                                                   | `[]`             |
+| `streamingNode.podLabels`                                         | Extra labels for data node pods                                                                                                                                                                                                               | `{}`             |
+| `streamingNode.podAnnotations`                                    | Annotations for data node pods                                                                                                                                                                                                                | `{}`             |
+| `streamingNode.podAffinityPreset`                                 | Pod affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                                 | `""`             |
+| `streamingNode.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                            | `soft`           |
+| `streamingNode.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `data node.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                           | `""`             |
+| `streamingNode.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `data node.affinity` is set                                                                                                                                                                               | `""`             |
+| `streamingNode.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `data node.affinity` is set                                                                                                                                                                            | `[]`             |
+| `streamingNode.affinity`                                          | Affinity for Streaming Node pods assignment                                                                                                                                                                                                   | `{}`             |
+| `streamingNode.nodeSelector`                                      | Node labels for Streaming Node pods assignment                                                                                                                                                                                                | `{}`             |
+| `streamingNode.tolerations`                                       | Tolerations for Streaming Node pods assignment                                                                                                                                                                                                | `[]`             |
+| `streamingNode.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains                                                                                                                                               | `[]`             |
+| `streamingNode.priorityClassName`                                 | Streaming Node pods' priorityClassName                                                                                                                                                                                                        | `""`             |
+| `streamingNode.schedulerName`                                     | Kubernetes pod scheduler registry                                                                                                                                                                                                             | `""`             |
+| `streamingNode.updateStrategy.type`                               | Streaming Node statefulset strategy type                                                                                                                                                                                                      | `RollingUpdate`  |
+| `streamingNode.updateStrategy.rollingUpdate`                      | Streaming Node statefulset rolling update configuration parameters                                                                                                                                                                            | `{}`             |
+| `streamingNode.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Streaming Node pod(s)                                                                                                                                                             | `[]`             |
+| `streamingNode.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Streaming Node container(s)                                                                                                                                                  | `[]`             |
+| `streamingNode.sidecars`                                          | Add additional sidecar containers to the Streaming Node pod(s)                                                                                                                                                                                | `[]`             |
+| `streamingNode.enableDefaultInitContainers`                       | Deploy default init containers                                                                                                                                                                                                                | `true`           |
+| `streamingNode.initContainers`                                    | Add additional init containers to the Streaming Node pod(s)                                                                                                                                                                                   | `[]`             |
+| `streamingNode.serviceAccount.create`                             | Enable creation of ServiceAccount for Streaming Node pods                                                                                                                                                                                     | `true`           |
+| `streamingNode.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                                                                                                                                                         | `""`             |
+| `streamingNode.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                                                                                                                                                        | `false`          |
+| `streamingNode.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                                                                                                                                                          | `{}`             |
+| `streamingNode.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                                                                                                                                                               | `true`           |
+| `streamingNode.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                                                | `{}`             |
+| `streamingNode.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `streamingNode.pdb.minAvailable` and `streamingNode.pdb.maxUnavailable` are empty.                                                                    | `{}`             |
 
-### Index Node Autoscaling configuration
+### Streaming Node Autoscaling configuration
 
-| Name                                                | Description                                                                                                                                                            | Value   |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `indexNode.autoscaling.vpa.enabled`                 | Enable VPA                                                                                                                                                             | `false` |
-| `indexNode.autoscaling.vpa.annotations`             | Annotations for VPA resource                                                                                                                                           | `{}`    |
-| `indexNode.autoscaling.vpa.controlledResources`     | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                         | `[]`    |
-| `indexNode.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
-| `indexNode.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
-| `indexNode.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `indexNode.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
-| `indexNode.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `indexNode.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `indexNode.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `indexNode.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
-| `indexNode.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
+| Name                                                    | Description                                                                                                                                                            | Value   |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `streamingNode.autoscaling.vpa.enabled`                 | Enable VPA                                                                                                                                                             | `false` |
+| `streamingNode.autoscaling.vpa.annotations`             | Annotations for VPA resource                                                                                                                                           | `{}`    |
+| `streamingNode.autoscaling.vpa.controlledResources`     | VPA List of resources that the vertical pod autoscaler can control. Defaults to cpu and memory                                                                         | `[]`    |
+| `streamingNode.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
+| `streamingNode.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
+| `streamingNode.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
+| `streamingNode.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Streaming node                                                                                                                                   | `false` |
+| `streamingNode.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
+| `streamingNode.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Streaming node replicas                                                                                                                       | `""`    |
+| `streamingNode.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Streaming node replicas                                                                                                                       | `""`    |
+| `streamingNode.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
+| `streamingNode.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
 
-### Index Node Traffic Exposure Parameters
+### Streaming Node Traffic Exposure Parameters
 
-| Name                                              | Description                                                      | Value       |
-| ------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
-| `indexNode.service.type`                          | Index Node service type                                          | `ClusterIP` |
-| `indexNode.service.ports.grpc`                    | Index Node GRPC service port                                     | `19530`     |
-| `indexNode.service.ports.metrics`                 | Index Node Metrics service port                                  | `9091`      |
-| `indexNode.service.nodePorts.grpc`                | Node port for GRPC                                               | `""`        |
-| `indexNode.service.nodePorts.metrics`             | Node port for Metrics                                            | `""`        |
-| `indexNode.service.sessionAffinityConfig`         | Additional settings for the sessionAffinity                      | `{}`        |
-| `indexNode.service.sessionAffinity`               | Control where client requests go, to the same pod or round-robin | `None`      |
-| `indexNode.service.clusterIP`                     | Index Node service Cluster IP                                    | `""`        |
-| `indexNode.service.loadBalancerIP`                | Index Node service Load Balancer IP                              | `""`        |
-| `indexNode.service.loadBalancerSourceRanges`      | Index Node service Load Balancer sources                         | `[]`        |
-| `indexNode.service.externalTrafficPolicy`         | Index Node service external traffic policy                       | `Cluster`   |
-| `indexNode.service.annotations`                   | Additional custom annotations for Index Node service             | `{}`        |
-| `indexNode.service.extraPorts`                    | Extra ports to expose in the Index Node service                  | `[]`        |
-| `indexNode.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `false`     |
-| `indexNode.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
-| `indexNode.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `indexNode.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
-| `indexNode.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
-| `indexNode.networkPolicy.ingressNSPodMatchLabels` | Pod labels to match to allow traffic from other namespaces       | `{}`        |
+| Name                                                  | Description                                                      | Value       |
+| ----------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
+| `streamingNode.service.type`                          | Streaming Node service type                                      | `ClusterIP` |
+| `streamingNode.service.ports.grpc`                    | Streaming Node GRPC service port                                 | `19530`     |
+| `streamingNode.service.ports.metrics`                 | Streaming Node Metrics service port                              | `9091`      |
+| `streamingNode.service.nodePorts.grpc`                | Node port for GRPC                                               | `""`        |
+| `streamingNode.service.nodePorts.metrics`             | Node port for Metrics                                            | `""`        |
+| `streamingNode.service.sessionAffinityConfig`         | Additional settings for the sessionAffinity                      | `{}`        |
+| `streamingNode.service.sessionAffinity`               | Control where client requests go, to the same pod or round-robin | `None`      |
+| `streamingNode.service.clusterIP`                     | Streaming Node service Cluster IP                                | `""`        |
+| `streamingNode.service.loadBalancerIP`                | Streaming Node service Load Balancer IP                          | `""`        |
+| `streamingNode.service.loadBalancerSourceRanges`      | Streaming Node service Load Balancer sources                     | `[]`        |
+| `streamingNode.service.externalTrafficPolicy`         | Streaming Node service external traffic policy                   | `Cluster`   |
+| `streamingNode.service.annotations`                   | Additional custom annotations for Streaming Node service         | `{}`        |
+| `streamingNode.service.extraPorts`                    | Extra ports to expose in the Streaming Node service              | `[]`        |
+| `streamingNode.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `true`      |
+| `streamingNode.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`      |
+| `streamingNode.networkPolicy.allowExternalEgress`     | Allow the pod to access any range of port and all destinations.  | `true`      |
+| `streamingNode.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
+| `streamingNode.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`        |
+| `streamingNode.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`        |
+| `streamingNode.networkPolicy.ingressNSPodMatchLabels` | Pod labels to match to allow traffic from other namespaces       | `{}`        |
 
-### Index Node Metrics Parameters
+### Streaming Node Metrics Parameters
 
-| Name                                                 | Description                                                                           | Value   |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ------- |
-| `indexNode.metrics.enabled`                          | Enable metrics                                                                        | `false` |
-| `indexNode.metrics.annotations`                      | Annotations for the server service in order to scrape metrics                         | `{}`    |
-| `indexNode.metrics.serviceMonitor.enabled`           | Create ServiceMonitor Resource for scraping metrics using Prometheus Operator         | `false` |
-| `indexNode.metrics.serviceMonitor.annotations`       | Annotations for the ServiceMonitor Resource                                           | `""`    |
-| `indexNode.metrics.serviceMonitor.namespace`         | Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)         | `""`    |
-| `indexNode.metrics.serviceMonitor.interval`          | Interval at which metrics should be scraped.                                          | `""`    |
-| `indexNode.metrics.serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                               | `""`    |
-| `indexNode.metrics.serviceMonitor.labels`            | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus | `{}`    |
-| `indexNode.metrics.serviceMonitor.selector`          | Prometheus instance selector labels                                                   | `{}`    |
-| `indexNode.metrics.serviceMonitor.relabelings`       | RelabelConfigs to apply to samples before scraping                                    | `[]`    |
-| `indexNode.metrics.serviceMonitor.metricRelabelings` | MetricRelabelConfigs to apply to samples before ingestion                             | `[]`    |
-| `indexNode.metrics.serviceMonitor.honorLabels`       | Specify honorLabels parameter to add the scrape endpoint                              | `false` |
-| `indexNode.metrics.serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in prometheus.     | `""`    |
+| Name                                                     | Description                                                                           | Value   |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------- |
+| `streamingNode.metrics.enabled`                          | Enable metrics                                                                        | `false` |
+| `streamingNode.metrics.annotations`                      | Annotations for the server service in order to scrape metrics                         | `{}`    |
+| `streamingNode.metrics.serviceMonitor.enabled`           | Create ServiceMonitor Resource for scraping metrics using Prometheus Operator         | `false` |
+| `streamingNode.metrics.serviceMonitor.annotations`       | Annotations for the ServiceMonitor Resource                                           | `""`    |
+| `streamingNode.metrics.serviceMonitor.namespace`         | Namespace for the ServiceMonitor Resource (defaults to the Release Namespace)         | `""`    |
+| `streamingNode.metrics.serviceMonitor.interval`          | Interval at which metrics should be scraped.                                          | `""`    |
+| `streamingNode.metrics.serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                               | `""`    |
+| `streamingNode.metrics.serviceMonitor.labels`            | Additional labels that can be used so ServiceMonitor will be discovered by Prometheus | `{}`    |
+| `streamingNode.metrics.serviceMonitor.selector`          | Prometheus instance selector labels                                                   | `{}`    |
+| `streamingNode.metrics.serviceMonitor.relabelings`       | RelabelConfigs to apply to samples before scraping                                    | `[]`    |
+| `streamingNode.metrics.serviceMonitor.metricRelabelings` | MetricRelabelConfigs to apply to samples before ingestion                             | `[]`    |
+| `streamingNode.metrics.serviceMonitor.honorLabels`       | Specify honorLabels parameter to add the scrape endpoint                              | `false` |
+| `streamingNode.metrics.serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in prometheus.     | `""`    |
 
 ### Proxy Deployment Parameters
 
-| Name                                                      | Description                                                                                     | Value            |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------- |
-| `proxy.enabled`                                           | Enable Proxy deployment                                                                         | `true`           |
-| `proxy.extraEnvVars`                                      | Array with extra environment variables to add to proxy nodes                                    | `[]`             |
-| `proxy.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for proxy nodes                            | `""`             |
-| `proxy.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for proxy nodes                               | `""`             |
-| `proxy.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                      | `""`             |
-| `proxy.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                   | `""`             |
-| `proxy.extraConfig`                                       | Override configuration                                                                          | `{}`             |
-| `proxy.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the Dashboard                               | `""`             |
-| `proxy.command`                                           | Override default container command (useful when using custom images)                            | `[]`             |
-| `proxy.args`                                              | Override default container args (useful when using custom images)                               | `[]`             |
-| `proxy.replicaCount`                                      | Number of Proxy replicas to deploy                                                              | `1`              |
-| `proxy.containerPorts.grpc`                               | GRPC port for Proxy                                                                             | `19530`          |
-| `proxy.containerPorts.grpcInternal`                       | GRPC internal port for Proxy                                                                    | `19529`          |
-| `proxy.containerPorts.metrics`                            | Metrics port for Proxy                                                                          | `9091`           |
-| `proxy.livenessProbe.enabled`                             | Enable livenessProbe on Proxy nodes                                                             | `true`           |
-| `proxy.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                         | `5`              |
-| `proxy.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                | `10`             |
-| `proxy.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                               | `5`              |
-| `proxy.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                             | `5`              |
-| `proxy.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                             | `1`              |
-| `proxy.readinessProbe.enabled`                            | Enable readinessProbe on Proxy nodes                                                            | `true`           |
-| `proxy.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                        | `5`              |
-| `proxy.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                               | `10`             |
-| `proxy.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                              | `5`              |
-| `proxy.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                            | `5`              |
-| `proxy.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                            | `1`              |
-| `proxy.startupProbe.enabled`                              | Enable startupProbe on Proxy containers                                                         | `false`          |
-| `proxy.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                          | `5`              |
-| `proxy.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                 | `10`             |
-| `proxy.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                | `5`              |
-| `proxy.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                              | `5`              |
-| `proxy.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                              | `1`              |
-| `proxy.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                             | `{}`             |
-| `proxy.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                            | `{}`             |
-| `proxy.customStartupProbe`                                | Custom startupProbe that overrides the default one                                              | `{}`             |
-| `proxy.resources.limits`                                  | The resources limits for the proxy containers                                                   | `{}`             |
-| `proxy.resources.requests`                                | The requested resources for the proxy containers                                                | `{}`             |
-| `proxy.podSecurityContext.enabled`                        | Enabled Proxy pods' Security Context                                                            | `true`           |
-| `proxy.podSecurityContext.fsGroup`                        | Set Proxy pod's Security Context fsGroup                                                        | `1001`           |
-| `proxy.podSecurityContext.seccompProfile.type`            | Set Proxy container's Security Context seccomp profile                                          | `RuntimeDefault` |
-| `proxy.containerSecurityContext.enabled`                  | Enabled Proxy containers' Security Context                                                      | `true`           |
-| `proxy.containerSecurityContext.runAsUser`                | Set Proxy containers' Security Context runAsUser                                                | `1001`           |
-| `proxy.containerSecurityContext.runAsNonRoot`             | Set Proxy containers' Security Context runAsNonRoot                                             | `true`           |
-| `proxy.containerSecurityContext.readOnlyRootFilesystem`   | Set Proxy containers' Security Context runAsNonRoot                                             | `true`           |
-| `proxy.containerSecurityContext.allowPrivilegeEscalation` | Set Proxy container's privilege escalation                                                      | `false`          |
-| `proxy.containerSecurityContext.capabilities.drop`        | Set Proxy container's Security Context runAsNonRoot                                             | `["ALL"]`        |
-| `proxy.lifecycleHooks`                                    | for the proxy container(s) to automate configuration before or after startup                    | `{}`             |
-| `proxy.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                  | `""`             |
-| `proxy.hostAliases`                                       | proxy pods host aliases                                                                         | `[]`             |
-| `proxy.podLabels`                                         | Extra labels for proxy pods                                                                     | `{}`             |
-| `proxy.podAnnotations`                                    | Annotations for proxy pods                                                                      | `{}`             |
-| `proxy.podAffinityPreset`                                 | Pod affinity preset. Ignored if `proxy.affinity` is set. Allowed values: `soft` or `hard`       | `""`             |
-| `proxy.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `proxy.affinity` is set. Allowed values: `soft` or `hard`  | `soft`           |
-| `proxy.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `proxy.affinity` is set. Allowed values: `soft` or `hard` | `""`             |
-| `proxy.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `proxy.affinity` is set                                     | `""`             |
-| `proxy.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `proxy.affinity` is set                                  | `[]`             |
-| `proxy.affinity`                                          | Affinity for Proxy pods assignment                                                              | `{}`             |
-| `proxy.nodeSelector`                                      | Node labels for Proxy pods assignment                                                           | `{}`             |
-| `proxy.tolerations`                                       | Tolerations for Proxy pods assignment                                                           | `[]`             |
-| `proxy.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains | `[]`             |
-| `proxy.priorityClassName`                                 | Proxy pods' priorityClassName                                                                   | `""`             |
-| `proxy.schedulerName`                                     | Kubernetes pod scheduler registry                                                               | `""`             |
-| `proxy.updateStrategy.type`                               | Proxy statefulset strategy type                                                                 | `RollingUpdate`  |
-| `proxy.updateStrategy.rollingUpdate`                      | Proxy statefulset rolling update configuration parameters                                       | `{}`             |
-| `proxy.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Proxy pod(s)                        | `[]`             |
-| `proxy.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Proxy container(s)             | `[]`             |
-| `proxy.sidecars`                                          | Add additional sidecar containers to the Proxy pod(s)                                           | `[]`             |
-| `proxy.enableDefaultInitContainers`                       | Deploy default init containers                                                                  | `true`           |
-| `proxy.initContainers`                                    | Add additional init containers to the Proxy pod(s)                                              | `[]`             |
-| `proxy.serviceAccount.create`                             | Enable creation of ServiceAccount for Proxy pods                                                | `false`          |
-| `proxy.serviceAccount.name`                               | The name of the ServiceAccount to use                                                           | `""`             |
-| `proxy.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                          | `false`          |
-| `proxy.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                            | `{}`             |
-| `proxy.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                 | `false`          |
-| `proxy.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                  | `1`              |
-| `proxy.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                  | `""`             |
+| Name            | Description             | Value  |
+| --------------- | ----------------------- | ------ |
+| `proxy.enabled` | Enable Proxy deployment | `true` |
+
+### Proxy TLS Connection Configuration Parameters
+
+| Name                                                      | Description                                                                                                                                                                                                                   | Value            |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `proxy.tls.mode`                                          | TLS mode for proxy. Allowed values: `0`, `1`, `2`                                                                                                                                                                             | `0`              |
+| `proxy.tls.existingSecret`                                | Name of the existing secret containing the TLS certificates for proxy.                                                                                                                                                        | `""`             |
+| `proxy.tls.cert`                                          | The secret key from the existingSecret if 'cert' key different from the default (server.pem)                                                                                                                                  | `server.pem`     |
+| `proxy.tls.key`                                           | The secret key from the existingSecret if 'key' key different from the default (server.key)                                                                                                                                   | `server.key`     |
+| `proxy.tls.caCert`                                        | The secret key from the existingSecret if 'caCert' key different from the default (ca.pem)                                                                                                                                    | `ca.pem`         |
+| `proxy.tls.keyPassword`                                   | Password to access the password-protected PEM key if necessary.                                                                                                                                                               | `""`             |
+| `proxy.extraEnvVars`                                      | Array with extra environment variables to add to proxy nodes                                                                                                                                                                  | `[]`             |
+| `proxy.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for proxy nodes                                                                                                                                                          | `""`             |
+| `proxy.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for proxy nodes                                                                                                                                                             | `""`             |
+| `proxy.defaultConfig`                                     | Default override configuration from the common set in milvus.defaultConfig                                                                                                                                                    | `""`             |
+| `proxy.existingConfigMap`                                 | name of a ConfigMap with existing configuration for the default configuration                                                                                                                                                 | `""`             |
+| `proxy.extraConfig`                                       | Override configuration                                                                                                                                                                                                        | `{}`             |
+| `proxy.extraConfigExistingConfigMap`                      | name of a ConfigMap with existing configuration for the proxy nodes                                                                                                                                                           | `""`             |
+| `proxy.command`                                           | Override default container command (useful when using custom images)                                                                                                                                                          | `[]`             |
+| `proxy.args`                                              | Override default container args (useful when using custom images)                                                                                                                                                             | `[]`             |
+| `proxy.replicaCount`                                      | Number of Proxy replicas to deploy                                                                                                                                                                                            | `1`              |
+| `proxy.containerPorts.grpc`                               | GRPC port for Proxy                                                                                                                                                                                                           | `19530`          |
+| `proxy.containerPorts.grpcInternal`                       | GRPC internal port for Proxy                                                                                                                                                                                                  | `19529`          |
+| `proxy.containerPorts.metrics`                            | Metrics port for Proxy                                                                                                                                                                                                        | `9091`           |
+| `proxy.livenessProbe.enabled`                             | Enable livenessProbe on Proxy nodes                                                                                                                                                                                           | `true`           |
+| `proxy.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                       | `5`              |
+| `proxy.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                              | `10`             |
+| `proxy.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                             | `5`              |
+| `proxy.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                           | `5`              |
+| `proxy.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                           | `1`              |
+| `proxy.readinessProbe.enabled`                            | Enable readinessProbe on Proxy nodes                                                                                                                                                                                          | `true`           |
+| `proxy.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                                      | `5`              |
+| `proxy.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                             | `10`             |
+| `proxy.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                            | `5`              |
+| `proxy.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                          | `5`              |
+| `proxy.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                          | `1`              |
+| `proxy.startupProbe.enabled`                              | Enable startupProbe on Proxy containers                                                                                                                                                                                       | `false`          |
+| `proxy.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                        | `5`              |
+| `proxy.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                               | `10`             |
+| `proxy.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                              | `5`              |
+| `proxy.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                            | `5`              |
+| `proxy.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                            | `1`              |
+| `proxy.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                                                                                                                                           | `{}`             |
+| `proxy.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                                                                                                                                          | `{}`             |
+| `proxy.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                                                                                                                                            | `{}`             |
+| `proxy.resourcesPreset`                                   | Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if proxy.resources is set (proxy.resources is recommended for production). | `micro`          |
+| `proxy.resources`                                         | Set container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                             | `{}`             |
+| `proxy.podSecurityContext.enabled`                        | Enabled Proxy pods' Security Context                                                                                                                                                                                          | `true`           |
+| `proxy.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy                                                                                                                                                                                            | `Always`         |
+| `proxy.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface                                                                                                                                                                                | `[]`             |
+| `proxy.podSecurityContext.supplementalGroups`             | Set filesystem extra groups                                                                                                                                                                                                   | `[]`             |
+| `proxy.podSecurityContext.fsGroup`                        | Set Proxy pod's Security Context fsGroup                                                                                                                                                                                      | `1001`           |
+| `proxy.containerSecurityContext.enabled`                  | Enabled containers' Security Context                                                                                                                                                                                          | `true`           |
+| `proxy.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                                                                                                                              | `{}`             |
+| `proxy.containerSecurityContext.runAsUser`                | Set containers' Security Context runAsUser                                                                                                                                                                                    | `1001`           |
+| `proxy.containerSecurityContext.runAsGroup`               | Set containers' Security Context runAsGroup                                                                                                                                                                                   | `1001`           |
+| `proxy.containerSecurityContext.runAsNonRoot`             | Set container's Security Context runAsNonRoot                                                                                                                                                                                 | `true`           |
+| `proxy.containerSecurityContext.privileged`               | Set container's Security Context privileged                                                                                                                                                                                   | `false`          |
+| `proxy.containerSecurityContext.readOnlyRootFilesystem`   | Set container's Security Context readOnlyRootFilesystem                                                                                                                                                                       | `true`           |
+| `proxy.containerSecurityContext.allowPrivilegeEscalation` | Set container's Security Context allowPrivilegeEscalation                                                                                                                                                                     | `false`          |
+| `proxy.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                                                                                                                            | `["ALL"]`        |
+| `proxy.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                                                                                                                              | `RuntimeDefault` |
+| `proxy.lifecycleHooks`                                    | for the proxy container(s) to automate configuration before or after startup                                                                                                                                                  | `{}`             |
+| `proxy.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                                                                                                                                                | `""`             |
+| `proxy.automountServiceAccountToken`                      | Mount Service Account token in pod                                                                                                                                                                                            | `false`          |
+| `proxy.hostAliases`                                       | proxy pods host aliases                                                                                                                                                                                                       | `[]`             |
+| `proxy.podLabels`                                         | Extra labels for proxy pods                                                                                                                                                                                                   | `{}`             |
+| `proxy.podAnnotations`                                    | Annotations for proxy pods                                                                                                                                                                                                    | `{}`             |
+| `proxy.podAffinityPreset`                                 | Pod affinity preset. Ignored if `proxy.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                     | `""`             |
+| `proxy.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `proxy.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                | `soft`           |
+| `proxy.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `proxy.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                               | `""`             |
+| `proxy.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `proxy.affinity` is set                                                                                                                                                                   | `""`             |
+| `proxy.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `proxy.affinity` is set                                                                                                                                                                | `[]`             |
+| `proxy.affinity`                                          | Affinity for Proxy pods assignment                                                                                                                                                                                            | `{}`             |
+| `proxy.nodeSelector`                                      | Node labels for Proxy pods assignment                                                                                                                                                                                         | `{}`             |
+| `proxy.tolerations`                                       | Tolerations for Proxy pods assignment                                                                                                                                                                                         | `[]`             |
+| `proxy.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains                                                                                                                               | `[]`             |
+| `proxy.priorityClassName`                                 | Proxy pods' priorityClassName                                                                                                                                                                                                 | `""`             |
+| `proxy.schedulerName`                                     | Kubernetes pod scheduler registry                                                                                                                                                                                             | `""`             |
+| `proxy.updateStrategy.type`                               | Proxy statefulset strategy type                                                                                                                                                                                               | `RollingUpdate`  |
+| `proxy.updateStrategy.rollingUpdate`                      | Proxy statefulset rolling update configuration parameters                                                                                                                                                                     | `{}`             |
+| `proxy.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Proxy pod(s)                                                                                                                                                      | `[]`             |
+| `proxy.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Proxy container(s)                                                                                                                                           | `[]`             |
+| `proxy.sidecars`                                          | Add additional sidecar containers to the Proxy pod(s)                                                                                                                                                                         | `[]`             |
+| `proxy.enableDefaultInitContainers`                       | Deploy default init containers                                                                                                                                                                                                | `true`           |
+| `proxy.initContainers`                                    | Add additional init containers to the Proxy pod(s)                                                                                                                                                                            | `[]`             |
+| `proxy.serviceAccount.create`                             | Enable creation of ServiceAccount for Proxy pods                                                                                                                                                                              | `true`           |
+| `proxy.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                                                                                                                                         | `""`             |
+| `proxy.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                                                                                                                                        | `false`          |
+| `proxy.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                                                                                                                                          | `{}`             |
+| `proxy.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                                                                                                                                               | `true`           |
+| `proxy.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                                | `{}`             |
+| `proxy.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `proxy.pdb.minAvailable` and `proxy.pdb.maxUnavailable` are empty.                                                                    | `{}`             |
 
 ### Proxy Autoscaling configuration
 
@@ -1194,10 +1093,10 @@ The command removes all the Kubernetes components associated with the chart and 
 | `proxy.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
 | `proxy.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
 | `proxy.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `proxy.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
+| `proxy.autoscaling.hpa.enabled`                 | Enable HPA for Milvus proxy                                                                                                                                            | `false` |
 | `proxy.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `proxy.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `proxy.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
+| `proxy.autoscaling.hpa.minReplicas`             | Minimum number of Milvus proxy replicas                                                                                                                                | `""`    |
+| `proxy.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus proxy replicas                                                                                                                                | `""`    |
 | `proxy.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
 | `proxy.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
 
@@ -1218,8 +1117,9 @@ The command removes all the Kubernetes components associated with the chart and 
 | `proxy.service.externalTrafficPolicy`         | Proxy service external traffic policy                            | `Cluster`      |
 | `proxy.service.annotations`                   | Additional custom annotations for Proxy service                  | `{}`           |
 | `proxy.service.extraPorts`                    | Extra ports to expose in the Proxy service                       | `[]`           |
-| `proxy.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `false`        |
+| `proxy.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                       | `true`         |
 | `proxy.networkPolicy.allowExternal`           | The Policy model to apply                                        | `true`         |
+| `proxy.networkPolicy.allowExternalEgress`     | Allow the pod to access any range of port and all destinations.  | `true`         |
 | `proxy.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                     | `[]`           |
 | `proxy.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                     | `[]`           |
 | `proxy.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces           | `{}`           |
@@ -1245,85 +1145,91 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Attu Deployment Parameters
 
-| Name                                                     | Description                                                                                          | Value                 |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------- |
-| `attu.enabled`                                           | Enable Attu deployment                                                                               | `true`                |
-| `attu.image.registry`                                    | Attu image registry                                                                                  | `docker.io`           |
-| `attu.image.repository`                                  | Attu image repository                                                                                | `bitnami/attu`        |
-| `attu.image.tag`                                         | Attu image tag (immutable tags are recommended)                                                      | `2.2.7-debian-11-r18` |
-| `attu.image.digest`                                      | Attu image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`                  |
-| `attu.image.pullPolicy`                                  | Attu image pull policy                                                                               | `IfNotPresent`        |
-| `attu.image.pullSecrets`                                 | Attu image pull secrets                                                                              | `[]`                  |
-| `attu.image.debug`                                       | Enable debug mode                                                                                    | `false`               |
-| `attu.extraEnvVars`                                      | Array with extra environment variables to add to attu nodes                                          | `[]`                  |
-| `attu.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for attu nodes                                  | `""`                  |
-| `attu.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for attu nodes                                     | `""`                  |
-| `attu.command`                                           | Override default container command (useful when using custom images)                                 | `[]`                  |
-| `attu.args`                                              | Override default container args (useful when using custom images)                                    | `[]`                  |
-| `attu.replicaCount`                                      | Number of Attu replicas to deploy                                                                    | `1`                   |
-| `attu.containerPorts.http`                               | HTTP port for Attu                                                                                   | `3000`                |
-| `attu.livenessProbe.enabled`                             | Enable livenessProbe on Attu nodes                                                                   | `true`                |
-| `attu.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                              | `5`                   |
-| `attu.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                     | `10`                  |
-| `attu.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                    | `5`                   |
-| `attu.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                  | `5`                   |
-| `attu.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                  | `1`                   |
-| `attu.readinessProbe.enabled`                            | Enable readinessProbe on Attu nodes                                                                  | `true`                |
-| `attu.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                             | `5`                   |
-| `attu.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                    | `10`                  |
-| `attu.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                   | `5`                   |
-| `attu.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                 | `5`                   |
-| `attu.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                 | `1`                   |
-| `attu.startupProbe.enabled`                              | Enable startupProbe on Attu containers                                                               | `false`               |
-| `attu.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                               | `5`                   |
-| `attu.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                      | `10`                  |
-| `attu.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                     | `5`                   |
-| `attu.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                   | `5`                   |
-| `attu.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                   | `1`                   |
-| `attu.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                  | `{}`                  |
-| `attu.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                 | `{}`                  |
-| `attu.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                   | `{}`                  |
-| `attu.resources.limits`                                  | The resources limits for the attu containers                                                         | `{}`                  |
-| `attu.resources.requests`                                | The requested resources for the attu containers                                                      | `{}`                  |
-| `attu.podSecurityContext.enabled`                        | Enabled Attu pods' Security Context                                                                  | `true`                |
-| `attu.podSecurityContext.fsGroup`                        | Set Attu pod's Security Context fsGroup                                                              | `1001`                |
-| `attu.podSecurityContext.seccompProfile.type`            | Set Attu container's Security Context seccomp profile                                                | `RuntimeDefault`      |
-| `attu.containerSecurityContext.enabled`                  | Enabled Attu containers' Security Context                                                            | `true`                |
-| `attu.containerSecurityContext.runAsUser`                | Set Attu containers' Security Context runAsUser                                                      | `1001`                |
-| `attu.containerSecurityContext.runAsNonRoot`             | Set Attu containers' Security Context runAsNonRoot                                                   | `true`                |
-| `attu.containerSecurityContext.readOnlyRootFilesystem`   | Set Attu containers' Security Context runAsNonRoot                                                   | `true`                |
-| `attu.containerSecurityContext.allowPrivilegeEscalation` | Set Attu container's privilege escalation                                                            | `false`               |
-| `attu.containerSecurityContext.capabilities.drop`        | Set Attu container's Security Context runAsNonRoot                                                   | `["ALL"]`             |
-| `attu.lifecycleHooks`                                    | for the attu container(s) to automate configuration before or after startup                          | `{}`                  |
-| `attu.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                       | `""`                  |
-| `attu.hostAliases`                                       | attu pods host aliases                                                                               | `[]`                  |
-| `attu.podLabels`                                         | Extra labels for attu pods                                                                           | `{}`                  |
-| `attu.podAnnotations`                                    | Annotations for attu pods                                                                            | `{}`                  |
-| `attu.podAffinityPreset`                                 | Pod affinity preset. Ignored if `attu.affinity` is set. Allowed values: `soft` or `hard`             | `""`                  |
-| `attu.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `attu.affinity` is set. Allowed values: `soft` or `hard`        | `soft`                |
-| `attu.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `attu.affinity` is set. Allowed values: `soft` or `hard`       | `""`                  |
-| `attu.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `attu.affinity` is set                                           | `""`                  |
-| `attu.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `attu.affinity` is set                                        | `[]`                  |
-| `attu.affinity`                                          | Affinity for Attu pods assignment                                                                    | `{}`                  |
-| `attu.nodeSelector`                                      | Node labels for Attu pods assignment                                                                 | `{}`                  |
-| `attu.tolerations`                                       | Tolerations for Attu pods assignment                                                                 | `[]`                  |
-| `attu.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains      | `[]`                  |
-| `attu.priorityClassName`                                 | Attu pods' priorityClassName                                                                         | `""`                  |
-| `attu.schedulerName`                                     | Kubernetes pod scheduler registry                                                                    | `""`                  |
-| `attu.updateStrategy.type`                               | Attu statefulset strategy type                                                                       | `RollingUpdate`       |
-| `attu.updateStrategy.rollingUpdate`                      | Attu statefulset rolling update configuration parameters                                             | `{}`                  |
-| `attu.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Attu pod(s)                              | `[]`                  |
-| `attu.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Attu container(s)                   | `[]`                  |
-| `attu.sidecars`                                          | Add additional sidecar containers to the Attu pod(s)                                                 | `[]`                  |
-| `attu.enableDefaultInitContainers`                       | Deploy default init containers                                                                       | `true`                |
-| `attu.initContainers`                                    | Add additional init containers to the Attu pod(s)                                                    | `[]`                  |
-| `attu.serviceAccount.create`                             | Enable creation of ServiceAccount for Attu pods                                                      | `false`               |
-| `attu.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                | `""`                  |
-| `attu.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                               | `false`               |
-| `attu.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                 | `{}`                  |
-| `attu.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                      | `false`               |
-| `attu.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                       | `1`                   |
-| `attu.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable                                       | `""`                  |
+| Name                                                     | Description                                                                                                                                                                                                                 | Value                  |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `attu.enabled`                                           | Enable Attu deployment                                                                                                                                                                                                      | `true`                 |
+| `attu.image.registry`                                    | Attu image registry                                                                                                                                                                                                         | `REGISTRY_NAME`        |
+| `attu.image.repository`                                  | Attu image repository                                                                                                                                                                                                       | `REPOSITORY_NAME/attu` |
+| `attu.image.digest`                                      | Attu image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                                                                                                                        | `""`                   |
+| `attu.image.pullPolicy`                                  | Attu image pull policy                                                                                                                                                                                                      | `IfNotPresent`         |
+| `attu.image.pullSecrets`                                 | Attu image pull secrets                                                                                                                                                                                                     | `[]`                   |
+| `attu.image.debug`                                       | Enable debug mode                                                                                                                                                                                                           | `false`                |
+| `attu.extraEnvVars`                                      | Array with extra environment variables to add to attu nodes                                                                                                                                                                 | `[]`                   |
+| `attu.extraEnvVarsCM`                                    | Name of existing ConfigMap containing extra env vars for attu nodes                                                                                                                                                         | `""`                   |
+| `attu.extraEnvVarsSecret`                                | Name of existing Secret containing extra env vars for attu nodes                                                                                                                                                            | `""`                   |
+| `attu.command`                                           | Override default container command (useful when using custom images)                                                                                                                                                        | `[]`                   |
+| `attu.args`                                              | Override default container args (useful when using custom images)                                                                                                                                                           | `[]`                   |
+| `attu.replicaCount`                                      | Number of Attu replicas to deploy                                                                                                                                                                                           | `1`                    |
+| `attu.containerPorts.http`                               | HTTP port for Attu                                                                                                                                                                                                          | `3000`                 |
+| `attu.livenessProbe.enabled`                             | Enable livenessProbe on Attu nodes                                                                                                                                                                                          | `true`                 |
+| `attu.livenessProbe.initialDelaySeconds`                 | Initial delay seconds for livenessProbe                                                                                                                                                                                     | `5`                    |
+| `attu.livenessProbe.periodSeconds`                       | Period seconds for livenessProbe                                                                                                                                                                                            | `10`                   |
+| `attu.livenessProbe.timeoutSeconds`                      | Timeout seconds for livenessProbe                                                                                                                                                                                           | `5`                    |
+| `attu.livenessProbe.failureThreshold`                    | Failure threshold for livenessProbe                                                                                                                                                                                         | `5`                    |
+| `attu.livenessProbe.successThreshold`                    | Success threshold for livenessProbe                                                                                                                                                                                         | `1`                    |
+| `attu.readinessProbe.enabled`                            | Enable readinessProbe on Attu nodes                                                                                                                                                                                         | `true`                 |
+| `attu.readinessProbe.initialDelaySeconds`                | Initial delay seconds for readinessProbe                                                                                                                                                                                    | `5`                    |
+| `attu.readinessProbe.periodSeconds`                      | Period seconds for readinessProbe                                                                                                                                                                                           | `10`                   |
+| `attu.readinessProbe.timeoutSeconds`                     | Timeout seconds for readinessProbe                                                                                                                                                                                          | `5`                    |
+| `attu.readinessProbe.failureThreshold`                   | Failure threshold for readinessProbe                                                                                                                                                                                        | `5`                    |
+| `attu.readinessProbe.successThreshold`                   | Success threshold for readinessProbe                                                                                                                                                                                        | `1`                    |
+| `attu.startupProbe.enabled`                              | Enable startupProbe on Attu containers                                                                                                                                                                                      | `false`                |
+| `attu.startupProbe.initialDelaySeconds`                  | Initial delay seconds for startupProbe                                                                                                                                                                                      | `5`                    |
+| `attu.startupProbe.periodSeconds`                        | Period seconds for startupProbe                                                                                                                                                                                             | `10`                   |
+| `attu.startupProbe.timeoutSeconds`                       | Timeout seconds for startupProbe                                                                                                                                                                                            | `5`                    |
+| `attu.startupProbe.failureThreshold`                     | Failure threshold for startupProbe                                                                                                                                                                                          | `5`                    |
+| `attu.startupProbe.successThreshold`                     | Success threshold for startupProbe                                                                                                                                                                                          | `1`                    |
+| `attu.customLivenessProbe`                               | Custom livenessProbe that overrides the default one                                                                                                                                                                         | `{}`                   |
+| `attu.customReadinessProbe`                              | Custom readinessProbe that overrides the default one                                                                                                                                                                        | `{}`                   |
+| `attu.customStartupProbe`                                | Custom startupProbe that overrides the default one                                                                                                                                                                          | `{}`                   |
+| `attu.resourcesPreset`                                   | Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if attu.resources is set (attu.resources is recommended for production). | `micro`                |
+| `attu.resources`                                         | Set container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                           | `{}`                   |
+| `attu.podSecurityContext.enabled`                        | Enabled Attu pods' Security Context                                                                                                                                                                                         | `true`                 |
+| `attu.podSecurityContext.fsGroupChangePolicy`            | Set filesystem group change policy                                                                                                                                                                                          | `Always`               |
+| `attu.podSecurityContext.sysctls`                        | Set kernel settings using the sysctl interface                                                                                                                                                                              | `[]`                   |
+| `attu.podSecurityContext.supplementalGroups`             | Set filesystem extra groups                                                                                                                                                                                                 | `[]`                   |
+| `attu.podSecurityContext.fsGroup`                        | Set Attu pod's Security Context fsGroup                                                                                                                                                                                     | `1001`                 |
+| `attu.containerSecurityContext.enabled`                  | Enabled containers' Security Context                                                                                                                                                                                        | `true`                 |
+| `attu.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                                                                                                                            | `{}`                   |
+| `attu.containerSecurityContext.runAsUser`                | Set containers' Security Context runAsUser                                                                                                                                                                                  | `1001`                 |
+| `attu.containerSecurityContext.runAsGroup`               | Set containers' Security Context runAsGroup                                                                                                                                                                                 | `1001`                 |
+| `attu.containerSecurityContext.runAsNonRoot`             | Set container's Security Context runAsNonRoot                                                                                                                                                                               | `true`                 |
+| `attu.containerSecurityContext.privileged`               | Set container's Security Context privileged                                                                                                                                                                                 | `false`                |
+| `attu.containerSecurityContext.readOnlyRootFilesystem`   | Set container's Security Context readOnlyRootFilesystem                                                                                                                                                                     | `true`                 |
+| `attu.containerSecurityContext.allowPrivilegeEscalation` | Set container's Security Context allowPrivilegeEscalation                                                                                                                                                                   | `false`                |
+| `attu.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                                                                                                                          | `["ALL"]`              |
+| `attu.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                                                                                                                            | `RuntimeDefault`       |
+| `attu.lifecycleHooks`                                    | for the attu container(s) to automate configuration before or after startup                                                                                                                                                 | `{}`                   |
+| `attu.runtimeClassName`                                  | Name of the runtime class to be used by pod(s)                                                                                                                                                                              | `""`                   |
+| `attu.automountServiceAccountToken`                      | Mount Service Account token in pod                                                                                                                                                                                          | `false`                |
+| `attu.hostAliases`                                       | attu pods host aliases                                                                                                                                                                                                      | `[]`                   |
+| `attu.podLabels`                                         | Extra labels for attu pods                                                                                                                                                                                                  | `{}`                   |
+| `attu.podAnnotations`                                    | Annotations for attu pods                                                                                                                                                                                                   | `{}`                   |
+| `attu.podAffinityPreset`                                 | Pod affinity preset. Ignored if `attu.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                                    | `""`                   |
+| `attu.podAntiAffinityPreset`                             | Pod anti-affinity preset. Ignored if `attu.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                               | `soft`                 |
+| `attu.nodeAffinityPreset.type`                           | Node affinity preset type. Ignored if `attu.affinity` is set. Allowed values: `soft` or `hard`                                                                                                                              | `""`                   |
+| `attu.nodeAffinityPreset.key`                            | Node label key to match. Ignored if `attu.affinity` is set                                                                                                                                                                  | `""`                   |
+| `attu.nodeAffinityPreset.values`                         | Node label values to match. Ignored if `attu.affinity` is set                                                                                                                                                               | `[]`                   |
+| `attu.affinity`                                          | Affinity for Attu pods assignment                                                                                                                                                                                           | `{}`                   |
+| `attu.nodeSelector`                                      | Node labels for Attu pods assignment                                                                                                                                                                                        | `{}`                   |
+| `attu.tolerations`                                       | Tolerations for Attu pods assignment                                                                                                                                                                                        | `[]`                   |
+| `attu.topologySpreadConstraints`                         | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains                                                                                                                             | `[]`                   |
+| `attu.priorityClassName`                                 | Attu pods' priorityClassName                                                                                                                                                                                                | `""`                   |
+| `attu.schedulerName`                                     | Kubernetes pod scheduler registry                                                                                                                                                                                           | `""`                   |
+| `attu.updateStrategy.type`                               | Attu statefulset strategy type                                                                                                                                                                                              | `RollingUpdate`        |
+| `attu.updateStrategy.rollingUpdate`                      | Attu statefulset rolling update configuration parameters                                                                                                                                                                    | `{}`                   |
+| `attu.extraVolumes`                                      | Optionally specify extra list of additional volumes for the Attu pod(s)                                                                                                                                                     | `[]`                   |
+| `attu.extraVolumeMounts`                                 | Optionally specify extra list of additional volumeMounts for the Attu container(s)                                                                                                                                          | `[]`                   |
+| `attu.sidecars`                                          | Add additional sidecar containers to the Attu pod(s)                                                                                                                                                                        | `[]`                   |
+| `attu.enableDefaultInitContainers`                       | Deploy default init containers                                                                                                                                                                                              | `true`                 |
+| `attu.initContainers`                                    | Add additional init containers to the Attu pod(s)                                                                                                                                                                           | `[]`                   |
+| `attu.serviceAccount.create`                             | Enable creation of ServiceAccount for Attu pods                                                                                                                                                                             | `true`                 |
+| `attu.serviceAccount.name`                               | The name of the ServiceAccount to use                                                                                                                                                                                       | `""`                   |
+| `attu.serviceAccount.automountServiceAccountToken`       | Allows auto mount of ServiceAccountToken on the serviceAccount created                                                                                                                                                      | `false`                |
+| `attu.serviceAccount.annotations`                        | Additional custom annotations for the ServiceAccount                                                                                                                                                                        | `{}`                   |
+| `attu.pdb.create`                                        | Enable/disable a Pod Disruption Budget creation                                                                                                                                                                             | `true`                 |
+| `attu.pdb.minAvailable`                                  | Minimum number/percentage of pods that should remain scheduled                                                                                                                                                              | `{}`                   |
+| `attu.pdb.maxUnavailable`                                | Maximum number/percentage of pods that may be made unavailable. Defaults to `1` if both `attu.pdb.minAvailable` and `attu.pdb.maxUnavailable` are empty.                                                                    | `{}`                   |
 
 ### Attu Autoscaling configuration
 
@@ -1335,10 +1241,10 @@ The command removes all the Kubernetes components associated with the chart and 
 | `attu.autoscaling.vpa.maxAllowed`              | VPA Max allowed resources for the pod                                                                                                                                  | `{}`    |
 | `attu.autoscaling.vpa.minAllowed`              | VPA Min allowed resources for the pod                                                                                                                                  | `{}`    |
 | `attu.autoscaling.vpa.updatePolicy.updateMode` | Autoscaling update policy Specifies whether recommended updates are applied when a Pod is started and whether recommended updates are applied during the life of a Pod | `Auto`  |
-| `attu.autoscaling.hpa.enabled`                 | Enable HPA for Milvus Data Plane                                                                                                                                       | `false` |
+| `attu.autoscaling.hpa.enabled`                 | Enable HPA for Milvus attu                                                                                                                                             | `false` |
 | `attu.autoscaling.hpa.annotations`             | Annotations for HPA resource                                                                                                                                           | `{}`    |
-| `attu.autoscaling.hpa.minReplicas`             | Minimum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
-| `attu.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus Data Plane replicas                                                                                                                           | `""`    |
+| `attu.autoscaling.hpa.minReplicas`             | Minimum number of Milvus attu replicas                                                                                                                                 | `""`    |
+| `attu.autoscaling.hpa.maxReplicas`             | Maximum number of Milvus attu replicas                                                                                                                                 | `""`    |
 | `attu.autoscaling.hpa.targetCPU`               | Target CPU utilization percentage                                                                                                                                      | `""`    |
 | `attu.autoscaling.hpa.targetMemory`            | Target Memory utilization percentage                                                                                                                                   | `""`    |
 
@@ -1371,8 +1277,9 @@ The command removes all the Kubernetes components associated with the chart and 
 | `attu.ingress.extraTls`                      | TLS configuration for additional hostname(s) to be covered with this ingress record                                              | `[]`                     |
 | `attu.ingress.secrets`                       | Custom TLS certificates as secrets                                                                                               | `[]`                     |
 | `attu.ingress.extraRules`                    | Additional rules to be covered with this ingress record                                                                          | `[]`                     |
-| `attu.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                                                                                       | `false`                  |
+| `attu.networkPolicy.enabled`                 | Enable creation of NetworkPolicy resources                                                                                       | `true`                   |
 | `attu.networkPolicy.allowExternal`           | The Policy model to apply                                                                                                        | `true`                   |
+| `attu.networkPolicy.allowExternalEgress`     | Allow the pod to access any range of port and all destinations.                                                                  | `true`                   |
 | `attu.networkPolicy.extraIngress`            | Add extra ingress rules to the NetworkPolicy                                                                                     | `[]`                     |
 | `attu.networkPolicy.extraEgress`             | Add extra ingress rules to the NetworkPolicy                                                                                     | `[]`                     |
 | `attu.networkPolicy.ingressNSMatchLabels`    | Labels to match to allow traffic from other namespaces                                                                           | `{}`                     |
@@ -1380,52 +1287,80 @@ The command removes all the Kubernetes components associated with the chart and 
 
 ### Init Container Parameters
 
-| Name                                                              | Description                                                                                                                   | Value              |
-| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `waitContainer.image.registry`                                    | Init container wait-container image registry                                                                                  | `docker.io`        |
-| `waitContainer.image.repository`                                  | Init container wait-container image name                                                                                      | `bitnami/os-shell` |
-| `waitContainer.image.tag`                                         | Init container wait-container image tag                                                                                       | `11-debian-11-r16` |
-| `waitContainer.image.digest`                                      | Init container wait-container image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`               |
-| `waitContainer.image.pullPolicy`                                  | Init container wait-container image pull policy                                                                               | `IfNotPresent`     |
-| `waitContainer.image.pullSecrets`                                 | Specify docker-registry secret names as an array                                                                              | `[]`               |
-| `waitContainer.containerSecurityContext.enabled`                  | Enabled Milvus containers' Security Context                                                                                   | `true`             |
-| `waitContainer.containerSecurityContext.runAsUser`                | Set Milvus containers' Security Context runAsUser                                                                             | `1001`             |
-| `waitContainer.containerSecurityContext.runAsNonRoot`             | Set Milvus containers' Security Context runAsNonRoot                                                                          | `true`             |
-| `waitContainer.containerSecurityContext.readOnlyRootFilesystem`   | Set Milvus containers' Security Context runAsNonRoot                                                                          | `true`             |
-| `waitContainer.containerSecurityContext.allowPrivilegeEscalation` | Set Milvus container's privilege escalation                                                                                   | `false`            |
-| `waitContainer.containerSecurityContext.capabilities.drop`        | Set Milvus container's Security Context runAsNonRoot                                                                          | `["ALL"]`          |
+| Name                                                              | Description                                                                                                                                                                                                                | Value                      |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `waitContainer.image.registry`                                    | Init container wait-container image registry                                                                                                                                                                               | `REGISTRY_NAME`            |
+| `waitContainer.image.repository`                                  | Init container wait-container image name                                                                                                                                                                                   | `REPOSITORY_NAME/os-shell` |
+| `waitContainer.image.digest`                                      | Init container wait-container image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag                                                                                              | `""`                       |
+| `waitContainer.image.pullPolicy`                                  | Init container wait-container image pull policy                                                                                                                                                                            | `IfNotPresent`             |
+| `waitContainer.image.pullSecrets`                                 | Specify docker-registry secret names as an array                                                                                                                                                                           | `[]`                       |
+| `waitContainer.containerSecurityContext.enabled`                  | Enabled containers' Security Context                                                                                                                                                                                       | `true`                     |
+| `waitContainer.containerSecurityContext.seLinuxOptions`           | Set SELinux options in container                                                                                                                                                                                           | `{}`                       |
+| `waitContainer.containerSecurityContext.runAsUser`                | Set containers' Security Context runAsUser                                                                                                                                                                                 | `1001`                     |
+| `waitContainer.containerSecurityContext.runAsGroup`               | Set containers' Security Context runAsGroup                                                                                                                                                                                | `1001`                     |
+| `waitContainer.containerSecurityContext.runAsNonRoot`             | Set container's Security Context runAsNonRoot                                                                                                                                                                              | `true`                     |
+| `waitContainer.containerSecurityContext.privileged`               | Set container's Security Context privileged                                                                                                                                                                                | `false`                    |
+| `waitContainer.containerSecurityContext.readOnlyRootFilesystem`   | Set container's Security Context readOnlyRootFilesystem                                                                                                                                                                    | `true`                     |
+| `waitContainer.containerSecurityContext.allowPrivilegeEscalation` | Set container's Security Context allowPrivilegeEscalation                                                                                                                                                                  | `false`                    |
+| `waitContainer.containerSecurityContext.capabilities.drop`        | List of capabilities to be dropped                                                                                                                                                                                         | `["ALL"]`                  |
+| `waitContainer.containerSecurityContext.seccompProfile.type`      | Set container's Security Context seccomp profile                                                                                                                                                                           | `RuntimeDefault`           |
+| `waitContainer.resourcesPreset`                                   | Set container resources according to one common preset (allowed values: none, nano, small, medium, large, xlarge, 2xlarge). This is ignored if initJob.resources is set (initJob.resources is recommended for production). | `micro`                    |
+| `waitContainer.resources`                                         | Set container requests and limits for different resources like CPU or memory (essential for production workloads)                                                                                                          | `{}`                       |
 
-### External etcd parameters
+### External etcd settings
 
-| Name                           | Description                                 | Value   |
-| ------------------------------ | ------------------------------------------- | ------- |
-| `externalEtcd.servers`         | List of hostnames of the external etcd      | `[]`    |
-| `externalEtcd.port`            | Port of the external etcd instance          | `2379`  |
-| `externalEtcd.secureTransport` | Use TLS for client-to-server communications | `false` |
+| Name                                     | Description                                                                                          | Value                |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------- |
+| `externalEtcd.servers`                   | List of hostnames of the external etcd                                                               | `[]`                 |
+| `externalEtcd.port`                      | Port of the external etcd instance                                                                   | `2379`               |
+| `externalEtcd.user`                      | User of the external etcd instance                                                                   | `root`               |
+| `externalEtcd.password`                  | Password of the external etcd instance                                                               | `""`                 |
+| `externalEtcd.existingSecret`            | Name of a secret containing the external etcd password                                               | `""`                 |
+| `externalEtcd.existingSecretPasswordKey` | Key inside the secret containing the external etcd password                                          | `etcd-root-password` |
+| `externalEtcd.tls.enabled`               | Enable TLS for etcd client connections.                                                              | `false`              |
+| `externalEtcd.tls.existingSecret`        | Name of the existing secret containing the TLS certificates for external etcd client communications. | `""`                 |
+| `externalEtcd.tls.cert`                  | The secret key from the existingSecret if 'cert' key different from the default (tls.crt)            | `tls.crt`            |
+| `externalEtcd.tls.key`                   | The secret key from the existingSecret if 'key' key different from the default (tls.key)             | `tls.key`            |
+| `externalEtcd.tls.caCert`                | The secret key from the existingSecret if 'caCert' key different from the default (ca.crt)           | `ca.crt`             |
+| `externalEtcd.tls.keyPassword`           | Password to access the password-protected PEM key if necessary.                                      | `""`                 |
 
 ### External S3 parameters
 
-| Name                                      | Description                                                        | Value           |
-| ----------------------------------------- | ------------------------------------------------------------------ | --------------- |
-| `externalS3.host`                         | External S3 host                                                   | `""`            |
-| `externalS3.port`                         | External S3 port number                                            | `443`           |
-| `externalS3.accessKeyID`                  | External S3 access key ID                                          | `""`            |
-| `externalS3.accessKeySecret`              | External S3 access key secret                                      | `""`            |
-| `externalS3.existingSecret`               | Name of an existing secret resource containing the S3 credentials  | `""`            |
-| `externalS3.existingSecretAccessKeyIDKey` | Name of an existing secret key containing the S3 access key ID     | `root-user`     |
-| `externalS3.existingSecretKeySecretKey`   | Name of an existing secret key containing the S3 access key secret | `root-password` |
-| `externalS3.protocol`                     | External S3 protocol                                               | `https`         |
-| `externalS3.bucket`                       | External S3 bucket                                                 | `milvus`        |
-| `externalS3.rootPath`                     | External S3 root path                                              | `file`          |
-| `externalS3.iamEndpoint`                  | External S3 IAM endpoint                                           | `""`            |
-| `externalS3.cloudProvider`                | External S3 cloud provider                                         | `""`            |
+| Name                                      | Description                                                                                       | Value           |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------- |
+| `externalS3.host`                         | External S3 host                                                                                  | `""`            |
+| `externalS3.port`                         | External S3 port number                                                                           | `443`           |
+| `externalS3.accessKeyID`                  | External S3 access key ID                                                                         | `""`            |
+| `externalS3.accessKeySecret`              | External S3 access key secret                                                                     | `""`            |
+| `externalS3.existingSecret`               | Name of an existing secret resource containing the S3 credentials                                 | `""`            |
+| `externalS3.existingSecretAccessKeyIDKey` | Name of an existing secret key containing the S3 access key ID                                    | `root-user`     |
+| `externalS3.existingSecretKeySecretKey`   | Name of an existing secret key containing the S3 access key secret                                | `root-password` |
+| `externalS3.bucket`                       | External S3 bucket                                                                                | `milvus`        |
+| `externalS3.rootPath`                     | External S3 root path                                                                             | `file`          |
+| `externalS3.iamEndpoint`                  | External S3 IAM endpoint                                                                          | `""`            |
+| `externalS3.cloudProvider`                | External S3 cloud provider                                                                        | `""`            |
+| `externalS3.tls.enabled`                  | Enable TLS for externalS3 client connections.                                                     | `false`         |
+| `externalS3.tls.existingSecret`           | Name of the existing secret containing the TLS certificates for externalS3 client communications. | `""`            |
+| `externalS3.tls.caCert`                   | The secret key from the existingSecret if 'caCert' key different from the default (ca.crt)        | `ca.crt`        |
 
 ### External Kafka parameters
 
-| Name                    | Description            | Value           |
-| ----------------------- | ---------------------- | --------------- |
-| `externalKafka.servers` | External Kafka brokers | `["localhost"]` |
-| `externalKafka.port`    | External Kafka port    | `9092`          |
+| Name                                           | Description                                                                                                        | Value                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------- |
+| `externalKafka.servers`                        | External Kafka brokers                                                                                             | `["localhost"]`       |
+| `externalKafka.port`                           | External Kafka port                                                                                                | `9092`                |
+| `externalKafka.listener.protocol`              | Kafka listener protocol. Allowed protocols: PLAINTEXT, SASL_PLAINTEXT, SASL_SSL and SSL                            | `PLAINTEXT`           |
+| `externalKafka.sasl.user`                      | User for SASL authentication                                                                                       | `user`                |
+| `externalKafka.sasl.password`                  | Password for SASL authentication                                                                                   | `""`                  |
+| `externalKafka.sasl.existingSecret`            | Name of the existing secret containing a password for SASL authentication (under the key named "client-passwords") | `""`                  |
+| `externalKafka.sasl.existingSecretPasswordKey` | Name of the secret key containing the Kafka client user password                                                   | `kafka-root-password` |
+| `externalKafka.sasl.enabledMechanisms`         | Kafka enabled SASL mechanisms                                                                                      | `PLAIN`               |
+| `externalKafka.tls.enabled`                    | Enable TLS for kafka client connections.                                                                           | `false`               |
+| `externalKafka.tls.existingSecret`             | Name of the existing secret containing the TLS certificates for external kafka client communications.              | `""`                  |
+| `externalKafka.tls.cert`                       | The secret key from the existingSecret if 'cert' key different from the default (tls.crt)                          | `tls.crt`             |
+| `externalKafka.tls.key`                        | The secret key from the existingSecret if 'key' key different from the default (tls.key)                           | `tls.key`             |
+| `externalKafka.tls.caCert`                     | The secret key from the existingSecret if 'caCert' key different from the default (ca.crt)                         | `ca.crt`              |
+| `externalKafka.tls.keyPassword`                | Password to access the password-protected PEM key if necessary.                                                    | `""`                  |
 
 ### etcd sub-chart parameters
 
@@ -1453,19 +1388,21 @@ The command removes all the Kubernetes components associated with the chart and 
 | `minio.service.type`               | MinIO&reg; service type                                                                                                           | `ClusterIP`                                         |
 | `minio.service.loadBalancerIP`     | MinIO&reg; service LoadBalancer IP                                                                                                | `""`                                                |
 | `minio.service.ports.api`          | MinIO&reg; service port                                                                                                           | `80`                                                |
+| `minio.console.enabled`            | Enable MinIO&reg; Console                                                                                                         | `false`                                             |
 
 ### kafka sub-chart paramaters
 
-| Name                               | Description                                  | Value      |
-| ---------------------------------- | -------------------------------------------- | ---------- |
-| `kafka.enabled`                    | Enable/disable Kafka chart installation      | `true`     |
-| `kafka.replicaCount`               | Number of Kafka brokers                      | `1`        |
-| `kafka.service.ports.client`       | Kafka svc port for client connections        | `9092`     |
-| `kafka.auth.clientProtocol`        | Kafka authentication protocol for the client | `sasl`     |
-| `kafka.auth.sasl.mechanisms`       | Kafka authentication mechanisms for SASL     | `plain`    |
-| `kafka.auth.sasl.jaas.clientUsers` | Kafka client users                           | `["user"]` |
+| Name                              | Description                                                   | Value            |
+| --------------------------------- | ------------------------------------------------------------- | ---------------- |
+| `kafka.enabled`                   | Enable/disable Kafka chart installation                       | `true`           |
+| `kafka.controller.replicaCount`   | Number of Kafka controller eligible (controller+broker) nodes | `1`              |
+| `kafka.service.ports.client`      | Kafka svc port for client connections                         | `9092`           |
+| `kafka.overrideConfiguration`     | Kafka common configuration override                           | `{}`             |
+| `kafka.listeners.client.protocol` | Kafka authentication protocol for the client listener         | `SASL_PLAINTEXT` |
+| `kafka.sasl.enabledMechanisms`    | Kafka enabled SASL mechanisms                                 | `PLAIN`          |
+| `kafka.sasl.client.users`         | Kafka client users                                            | `["user"]`       |
 
-See <https://github.com/bitnami-labs/readme-generator-for-helm> to create the table.
+See <https://github.com/bitnami/readme-generator-for-helm> to create the table.
 
 The above parameters map to the env variables defined in [bitnami/milvus](https://github.com/bitnami/containers/tree/main/bitnami/milvus). For more information please refer to the [bitnami/milvus](https://github.com/bitnami/containers/tree/main/bitnami/milvus) image documentation.
 
@@ -1474,131 +1411,114 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 ```console
 helm install my-release \
   --set loki.traces.jaeger.grpc=true \
-  oci://registry-1.docker.io/bitnamicharts/milvus
+  oci://REGISTRY_NAME/REPOSITORY_NAME/milvus
 ```
+
+> Note: You need to substitute the placeholders `REGISTRY_NAME` and `REPOSITORY_NAME` with a reference to your Helm chart registry and repository. For example, in the case of Bitnami, you need to use `REGISTRY_NAME=registry-1.docker.io` and `REPOSITORY_NAME=bitnamicharts`.
 
 The above command enables the Jaeger GRPC traces.
 
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-helm install my-release -f values.yaml oci://registry-1.docker.io/bitnamicharts/milvus
+helm install my-release -f values.yaml oci://REGISTRY_NAME/REPOSITORY_NAME/milvus
 ```
 
-> **Tip**: You can use the default [values.yaml](values.yaml)
-
-## Configuration and installation details
-
-### [Rolling VS Immutable tags](https://docs.bitnami.com/containers/how-to/understand-rolling-tags-containers/)
-
-It is strongly recommended to use immutable tags in a production environment. This ensures your deployment does not change automatically if the same tag is updated with a different image.
-
-Bitnami will release a new chart updating its containers if a new version of the main container, significant changes, or critical vulnerabilities exist.
-
-### Milvus configuration
-
-The Milvus configuration file `milvus.yaml` is shared across the different components: `rootCoord`, `dataCoord`, `indexCoord`, `dataNode` and `indexNode`. This is set in the `milvus.defaultConfig` value. This configuration can be extended with extra settings using the `milvus.extraConfig` value. For specific component configuration edit the `extraConfig` section inside each of the previously mentioned components. Check the official [Milvis documentation](https://milvus.io/docs) for the list of possible configurations.
-
-### Additional environment variables
-
-In case you want to add extra environment variables (useful for advanced operations like custom init scripts), you can use the `extraEnvVars` property inside each of the subsections: `rootCoord`, `dataCoord`, `indexCoord`, `dataNode`, `indexNode`, `attu` and `queryNode`.
-
-```yaml
-dataCoord:
-  extraEnvVars:
-    - name: LOG_LEVEL
-      value: error
-
-rootCoord:
-  extraEnvVars:
-    - name: LOG_LEVEL
-      value: error
-
-indexCoord:
-  extraEnvVars:
-    - name: LOG_LEVEL
-      value: error
-
-dataNode:
-  extraEnvVars:
-    - name: LOG_LEVEL
-      value: error
-
-indexNode:
-  extraEnvVars:
-    - name: LOG_LEVEL
-      value: error
-
-queryNode:
-  extraEnvVars:
-    - name: LOG_LEVEL
-      value: error
-```
-
-Alternatively, you can use a ConfigMap or a Secret with the environment variables. To do so, use the `extraEnvVarsCM` or the `extraEnvVarsSecret` values.
-
-### Sidecars
-
-If additional containers are needed in the same pod as milvus (such as additional metrics or logging exporters), they can be defined using the `sidecars` parameter inside each of the subsections: `rootCoord`, `dataCoord`, `indexCoord`, `dataNode`, `indexNode`, `attu` and `queryNode` . If these sidecars export extra ports, extra port definitions can be added using the `service.extraPorts` parameter. [Learn more about configuring and using sidecar containers](https://docs.bitnami.com/kubernetes/infrastructure/milvus/configuration/configure-sidecar-init-containers/).
-
-### Pod affinity
-
-This chart allows you to set your custom affinity using the `affinity` parameter. Find more information about Pod affinity in the [kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).
-
-As an alternative, use one of the preset configurations for pod affinity, pod anti-affinity, and node affinity available at the [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common#affinities) chart. To do so, set the `podAffinityPreset`, `podAntiAffinityPreset`, or `nodeAffinityPreset` parameters inside each of the subsections: `rootCoord`, `dataCoord`, `indexCoord`, `dataNode`, `indexNode`, `attu` and `queryNode`.
-
-### External kafka support
-
-You may want to have Milvus connect to an external kafka rather than installing one inside your cluster. Typical reasons for this are to use a managed database service, or to share a common database server for all your applications. To achieve this, the chart allows you to specify credentials for an external database with the [`externalKafka` parameter](#parameters). You should also disable the etcd installation with the `etcd.enabled` option. Here is an example:
-
-```yaml
-kafka:
-  enabled: false
-externalKafka:
-  hosts:
-    - externalhost
-```
-
-### External etcd support
-
-You may want to have Milvus connect to an external etcd rather than installing one inside your cluster. Typical reasons for this are to use a managed database service, or to share a common database server for all your applications. To achieve this, the chart allows you to specify credentials for an external database with the [`externalEtcd` parameter](#parameters). You should also disable the etcd installation with the `etcd.enabled` option. Here is an example:
-
-```yaml
-etcd:
-  enabled: false
-externalEtcd:
-  hosts:
-    - externalhost
-```
-
-### External S3 support
-
-You may want to have mastodon connect to an external storage streaming rather than installing MiniIO(TM) inside your cluster. To achieve this, the chart allows you to specify credentials for an external storage streaming with the [`externalS3` parameter](#parameters). You should also disable the MinIO(TM) installation with the `minio.enabled` option. Here is an example:
-
-```console
-minio.enabled=false
-externalS3.host=myexternalhost
-exterernalS3.accessKeyID=accesskey
-externalS3.accessKeySecret=secret
-```
-
-### Ingress
-
-This chart provides support for Ingress resources for the Attu component. If you have an ingress controller installed on your cluster, such as [nginx-ingress-controller](https://github.com/bitnami/charts/tree/main/bitnami/nginx-ingress-controller) or [contour](https://github.com/bitnami/charts/tree/main/bitnami/contour) you can utilize the ingress controller to serve the Attu dashboard.
-
-To enable Ingress integration, set `attu.ingress.enabled` to `true`. The `attu.ingress.hostname` property can be used to set the host name. The `attu.ingress.tls` parameter can be used to add the TLS configuration for this host. It is also possible to have more than one host, with a separate TLS configuration for each host. [Learn more about configuring and using Ingress](https://docs.bitnami.com/kubernetes/apps/mastodon/configuration/configure-ingress/).
-
-### TLS secrets
-
-The chart also facilitates the creation of TLS secrets for use with the Ingress controller, with different options for certificate management. [Learn more about TLS secrets](https://docs.bitnami.com/kubernetes/apps/mastodon/administration/enable-tls-ingress/).
+> Note: You need to substitute the placeholders `REGISTRY_NAME` and `REPOSITORY_NAME` with a reference to your Helm chart registry and repository. For example, in the case of Bitnami, you need to use `REGISTRY_NAME=registry-1.docker.io` and `REPOSITORY_NAME=bitnamicharts`.
+> **Tip**: You can use the default [values.yaml](https://github.com/bitnami/charts/tree/main/bitnami/milvus/values.yaml)
 
 ## Troubleshooting
 
 Find more information about how to deal with common errors related to Bitnami's Helm charts in [this troubleshooting guide](https://docs.bitnami.com/general/how-to/troubleshoot-helm-chart-issues).
 
+## Upgrading
+
+### To 16.0.0
+
+This major updates `milvus` to its latest version, 2.6.0. This new version introduces important architectural changes:
+
+- root-coordinator, data-coordinator, index-coordinator and query-coordinator have all been unified into a single coordinator component, called coordinator. Therefore, values `rootCoord.*`, `dataCoord.*`, `queryCoord.*` and `indexCoord.*` have been removed and new values `coordinator.*` have been added to the chart.
+- Capabilites of the data-node and index-node have been merged into the data-node, values `indexNode.*` have been removed from the chart.
+- New component streaming-node have been added, introducing new chart values `streamingNode.*`.
+
+### To 15.0.0
+
+This major updates the `minio` subchart to its newest major, 17.0.0. For more information on this subchart's major, please refer to [minio upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/minio#to-1700).
+
+### To 14.0.0
+
+This major updates the `etcd` subchart to it newest major, 12.0.0. For more information on this subchart's major, please refer to [etcd upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/etcd#to-1200).
+
+### To 13.0.0
+
+This major updates the `minio` subchart to its newest major, 16.0.0. For more information on this subchart's major, please refer to [minio upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/minio#to-1600) (effective in 13.2.0).
+
+### To 12.0.0
+
+This major updates the Kafka subchart to its newest major, 32.0.0. For more information on this subchart's major, please refer to [Kafka upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/kafka#to-3200).
+
+### To 11.0.0
+
+This major updates the `etcd` subchart to it newest major, 11.0.0. For more information on this subchart's major, please refer to [etcd upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/etcd#to-1100).
+
+### To 10.1.0
+
+This version introduces image verification for security purposes. To disable it, set `global.security.allowInsecureImages` to `true`. More details at [GitHub issue](https://github.com/bitnami/charts/issues/30850).
+
+### To 10.0.0
+
+This major updates the Kafka subchart to its newest major, 31.0.0. For more information on this subchart's major, please refer to [Kafka upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/kafka#to-3100).
+
+### To 9.0.0
+
+This major updates the Kafka subchart to its newest major, 30.0.0. For more information on this subchart's major, please refer to [Kafka upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/kafka#to-3000).
+
+### To 8.0.0
+
+This major updates the Kafka subchart to its newest major, 29.0.0. For more information on this subchart's major, please refer to [Kafka upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/kafka#to-2900).
+
+### To 7.0.0
+
+This major bump changes the following security defaults:
+
+- `runAsGroup` is changed from `0` to `1001`
+- `resourcesPreset` is changed from `none` to the minimum size working in our test suites (NOTE: `resourcesPreset` is not meant for production usage, but `resources` adapted to your use case).
+- `global.compatibility.openshift.adaptSecurityContext` is changed from `disabled` to `auto`.
+
+This could potentially break any customization or init scripts used in your deployment. If this is the case, change the default values to the previous ones.
+
+### To 6.0.0
+
+This major release bumps the MinIO chart version to [13.x.x](https://github.com/bitnami/charts/pull/22058/); no major issues are expected during the upgrade.
+
+### To 4.0.0
+
+This major updates the Kafka subchart to its newest major, 26.0.0. For more information on this subchart's major, please refer to [Kafka upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/kafka#to-2600).
+
+### To 3.0.0
+
+This major updates the Kafka subchart to its newest major, 25.0.0. For more information on this subchart's major, please refer to [Kafka upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/kafka#to-2500).
+
+### To 2.0.0
+
+This major updates the Kafka subchart to its newest major, 24.0.0. This new version refactors the Kafka chart architecture and requires manual actions during the upgrade. For more information on this subchart's major, please refer to [Kafka upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/kafka#to-2400).
+
+Additionally, the following values have been modified:
+
+- `externalKafka.securityProtocol` has been replaced with `externalKafka.listener.protocol`, which now allows Kafka security protocols 'PLAINTEXT','SASL_PLAINTEXT', 'SSL', 'SASL_SSL'.
+- `externalKafka.user` has been replaced with `externalAccess.sasl.user`.
+- `externalKafka.password` has been replaced with `externalAccess.sasl.password`.
+- `externalKafka.existingSecret` has been replaced with `externalAccess.sasl.existingSecret`.
+- `externalKafka.existingSecretPasswordKey` has been replaced with `externalAccess.sasl.existingSecretPasswordKey`.
+- `externalKafka.saslMechanisms` has been replaced with `externalAccess.sasl.enabledMechanisms`.
+
+### To 1.0.0
+
+This major updates the Kafka subchart to its newest major, 23.0.0. For more information on this subchart's major, please refer to [Kafka upgrade notes](https://github.com/bitnami/charts/tree/main/bitnami/kafka#to-2300).
+
 ## License
 
-Copyright &copy; 2023 VMware, Inc.
+Copyright &copy; 2025 Broadcom. The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

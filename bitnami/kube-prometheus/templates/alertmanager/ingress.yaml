@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -10,18 +10,12 @@ metadata:
   name: {{ template "kube-prometheus.alertmanager.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "kube-prometheus.alertmanager.labels" . | nindent 4 }}
-  annotations:
-    {{- if .Values.alertmanager.ingress.annotations }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.alertmanager.ingress.annotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if .Values.commonAnnotations }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
-    {{- end }}
-  {{- if .Values.commonLabels }}
-  labels: {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+  {{- if or .Values.alertmanager.ingress.annotations .Values.commonAnnotations }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.alertmanager.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and .Values.alertmanager.ingress.ingressClassName (include "common.ingress.supportsIngressClassname" .) }}
+  {{- if .Values.alertmanager.ingress.ingressClassName }}
   ingressClassName: {{ .Values.alertmanager.ingress.ingressClassName | quote }}
   {{- end }}
   rules:
@@ -32,9 +26,7 @@ spec:
           {{- toYaml .Values.alertmanager.ingress.extraPaths | nindent 10 }}
           {{- end }}
           - path: {{ .Values.alertmanager.ingress.path }}
-            {{- if eq "true" (include "common.ingress.supportsPathType" .) }}
             pathType: {{ .Values.alertmanager.ingress.pathType }}
-            {{- end }}
             backend: {{- include "common.ingress.backend" (dict "serviceName" (include "kube-prometheus.alertmanager.fullname" $) "servicePort" "http" "context" $)  | nindent 14 }}
       {{- if ne .Values.alertmanager.ingress.hostname "*" }}
       host: {{ .Values.alertmanager.ingress.hostname }}
@@ -45,9 +37,7 @@ spec:
       http:
         paths:
           - path: {{ default "/" .path }}
-            {{- if eq "true" (include "common.ingress.supportsPathType" $) }}
             pathType: {{ default "ImplementationSpecific" .pathType }}
-            {{- end }}
             backend: {{- include "common.ingress.backend" (dict "serviceName" (include "kube-prometheus.alertmanager.fullname" $) "servicePort" "http" "context" $) | nindent 14 }}
     {{- end }}
     {{- if .Values.alertmanager.ingress.extraRules }}

@@ -1,4 +1,4 @@
-# Copyright VMware, Inc.
+# Copyright Broadcom, Inc. All Rights Reserved.
 # SPDX-License-Identifier: APACHE-2.0
 
 file:
@@ -11,6 +11,7 @@ command:
   {{- $nodes := .Vars.postgresql.replicaCount }}
   check-repmgr-config:
     {{- $repmgr_password := .Vars.postgresql.repmgrPassword }}
+    {{- $repmgr_passfile := .Vars.postgresql.repmgrPassfilePath }}
     {{- $repmgr_user := .Vars.postgresql.repmgrUsername }}
     {{- $repmgr_database := .Vars.postgresql.repmgrDatabase }}
     {{- $repmgr_port := .Vars.postgresql.containerPorts.postgresql }}
@@ -18,11 +19,11 @@ command:
     exec: PGPASSWORD={{ $repmgr_password }} psql -U {{ $repmgr_user }} -d {{ $repmgr_database }} {{ $repmgr_endpoint }} -c "SELECT conninfo FROM repmgr.nodes WHERE type = 'primary'"
     exit-status: 0
     stdout:
-    - user={{ $repmgr_user }}
-    - password={{ $repmgr_password }}
-    - dbname={{ $repmgr_database }}
-    - port={{ $repmgr_port }}
-    - connect_timeout={{ .Vars.postgresql.repmgrConnectTimeout }}
+    - "user={{ $repmgr_user }}"
+    - "passfile={{ $repmgr_passfile }}"
+    - "dbname={{ $repmgr_database }}"
+    - "port={{ $repmgr_port }}"
+    - "connect_timeout={{ .Vars.postgresql.repmgrConnectTimeout }}"
   test-replication:
     # We need to first obtain the primary's host to perform write operations
     {{- $database := printf "db_%s" (randAlpha 5 | lower) }}

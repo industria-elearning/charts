@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -8,10 +8,7 @@ apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
 kind: ClusterRole
 metadata:
   name: {{ include "common.names.fullname" . }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -63,7 +60,6 @@ rules:
       - update
       - watch
   - apiGroups:
-      {{- include "nginx-ingress-controller.role.extensions.apiGroup" . | nindent 6 }}
       - networking.k8s.io
     resources:
       - ingresses
@@ -79,14 +75,12 @@ rules:
       - create
       - patch
   - apiGroups:
-      {{- include "nginx-ingress-controller.role.extensions.apiGroup" . | nindent 6 }}
       - networking.k8s.io
     resources:
       - ingresses/status
     verbs:
       - update
   - apiGroups:
-      {{- include "nginx-ingress-controller.role.extensions.apiGroup" . | nindent 6 }}
       - networking.k8s.io
     resources:
       - ingressclasses

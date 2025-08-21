@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -9,10 +9,9 @@ kind: ConfigMap
 metadata:
   name: {{ include "grafana-loki.gateway.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.gateway.image "chart" .Chart ) ) }}  
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
     app.kubernetes.io/part-of: grafana-loki
     app.kubernetes.io/component: gateway
   {{- if .Values.commonAnnotations }}
@@ -35,6 +34,10 @@ data:
         fastcgi_temp_path     /tmp/fastcgi_temp;
         uwsgi_temp_path       /tmp/uwsgi_temp;
         scgi_temp_path        /tmp/scgi_temp;
+        
+        {{- if .Values.gateway.service.nginx.config }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.gateway.service.nginx.config "context" $) | nindent 8 }}
+        {{- end }}
 
         default_type application/octet-stream;
         log_format  main '$remote_addr - $remote_user [$time_local]  $status ' '"$request" $body_bytes_sent "$http_referer" ' '"$http_user_agent" "$http_x_forwarded_for"';
@@ -97,6 +100,10 @@ data:
           }
 
           location = /loki/api/v1/push {
+            proxy_pass       http://{{ include "grafana-loki.distributor.fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:3100$request_uri;
+          }
+
+          location = /otlp/v1/logs {
             proxy_pass       http://{{ include "grafana-loki.distributor.fullname" . }}.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:3100$request_uri;
           }
 

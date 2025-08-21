@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -9,10 +9,7 @@ kind: Role
 metadata:
   name: {{ template "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
-    {{- end }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -44,7 +41,6 @@ rules:
       - update
       - watch
   - apiGroups:
-      {{- include "nginx-ingress-controller.role.extensions.apiGroup" . | nindent 6 }}
       - networking.k8s.io
     resources:
       - ingresses
@@ -53,7 +49,6 @@ rules:
       - list
       - watch
   - apiGroups:
-      {{- include "nginx-ingress-controller.role.extensions.apiGroup" . | nindent 6 }}
       - networking.k8s.io
     resources:
       - ingresses/status
@@ -94,7 +89,7 @@ rules:
   {{- end }}
   {{- $pspAvailable := (semverCompare "<1.25-0" (include "common.capabilities.kubeVersion" .)) -}}
   {{- if and $pspAvailable .Values.podSecurityPolicy.enabled }}
-  - apiGroups: [{{ template "nginx-ingress-controller.podSecurityPolicy.apiGroup" . }}]
+  - apiGroups: ['policy']
     resources: ['podsecuritypolicies']
     verbs: ['use']
     resourceNames: [{{ template "common.names.fullname" . }}]

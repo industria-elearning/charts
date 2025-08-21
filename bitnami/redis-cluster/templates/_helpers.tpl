@@ -1,5 +1,5 @@
 {{/*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -38,28 +38,6 @@ Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "redis-cluster.imagePullSecrets" -}}
 {{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.metrics.image) "global" .Values.global) -}}
-{{- end -}}
-
-{{/*
-Return the appropriate apiVersion for networkpolicy.
-*/}}
-{{- define "networkPolicy.apiVersion" -}}
-{{- if semverCompare ">=1.4-0, <1.7-0" .Capabilities.KubeVersion.GitVersion -}}
-{{- print "extensions/v1beta1" -}}
-{{- else -}}
-{{- print "networking.k8s.io/v1" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Return the appropriate apiGroup for PodSecurityPolicy.
-*/}}
-{{- define "podSecurityPolicy.apiGroup" -}}
-{{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
-{{- print "policy" -}}
-{{- else -}}
-{{- print "extensions" -}}
-{{- end -}}
 {{- end -}}
 
 {{/*
@@ -141,7 +119,7 @@ Get the password secret.
 */}}
 {{- define "redis-cluster.secretName" -}}
 {{- if .Values.existingSecret -}}
-{{- printf "%s" .Values.existingSecret -}}
+{{- printf "%s" (tpl .Values.existingSecret $) -}}
 {{- else -}}
 {{- printf "%s" (include "common.names.fullname" .) -}}
 {{- end -}}
@@ -168,6 +146,19 @@ Return Redis&reg; password
     {{- .Values.password -}}
 {{- else -}}
     {{- randAlphaNum 10 -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Returns true if useAOFPersistence should be enabled
+YAML will transform 'yes'/'no' into 'true'/'false' when quotes are missing, because it interprets the variable as boolean.
+Redis expects explicit 'yes'/'no', so this helper avoids issues when providing a boolean instead of a string.
+*/}}
+{{- define "redis-cluster.useAOFPersistence" -}}
+{{- if kindOf .Values.redis.useAOFPersistence | eq "bool" -}}
+    {{ ternary "yes" "no" .Values.redis.useAOFPersistence }}
+{{- else -}}
+    {{ print .Values.redis.useAOFPersistence }}
 {{- end -}}
 {{- end -}}
 
@@ -218,7 +209,7 @@ redis-cluster: newExternalIPs
 redis-cluster: currentNumberOfNodes
     You must provide the currentNumberOfNodes to perform an upgrade when not using external access.
     {{- end -}}
-    {{- if not .Values.cluster.update.currentNumberOfReplicas -}}
+    {{- if kindIs "invalid" .Values.cluster.update.currentNumberOfReplicas -}}
 redis-cluster: currentNumberOfReplicas
     You must provide the currentNumberOfReplicas to perform an upgrade when not using external access.
     {{- end -}}

@@ -1,5 +1,5 @@
 {{/*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -11,12 +11,26 @@ Return the proper Appsmith image name
 {{- end -}}
 
 {{/*
+Return the proper Appsmith image name
+*/}}
+{{- define "appsmith.redirect.image" -}}
+{{ include "common.images.image" (dict "imageRoot" .Values.backend.redirectAmbassador.image "global" .Values.global) }}
+{{- end -}}
+
+{{/*
 Return the proper Appsmith backend fullname
 */}}
 {{- define "appsmith.backend.fullname" -}}
 {{- printf "%s-%s" (include "common.names.fullname" .) "backend" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+
+{{/*
+Return the proper Appsmith backend fullname
+*/}}
+{{- define "appsmith.redirect.fullname" -}}
+{{- printf "%s-%s" (include "appsmith.backend.fullname" .) "redirect" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 {{/*
 Return the proper Appsmith rts fullname
 */}}
@@ -35,7 +49,7 @@ Return the proper image name (for the init container volume-permissions image)
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "appsmith.imagePullSecrets" -}}
-{{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.volumePermissions.image) "global" .Values.global) -}}
+{{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.volumePermissions.image .Values.backend.redirectAmbassador.image) "global" .Values.global) -}}
 {{- end -}}
 
 {{/*
@@ -91,6 +105,19 @@ Create the name of the service account to use
     {{ default (include "common.names.fullname" .) .Values.serviceAccount.name }}
 {{- else -}}
     {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Set the subdirectory for git connected apps to store their local repo
+*/}}
+{{- define "appsmith.gitDataPath" -}}
+{{- if and .Values.backend.persistence.enabled .Values.backend.persistence.gitDataPath -}}
+    {{- if .Values.backend.persistence.subPath -}}
+        {{- printf "%s/%s/%s" .Values.backend.persistence.mountPath .Values.backend.persistence.subPath .Values.backend.persistence.gitDataPath }}
+    {{- else -}}
+        {{- printf "%s/%s" .Values.backend.persistence.mountPath .Values.backend.persistence.gitDataPath }}
+    {{- end -}}
 {{- end -}}
 {{- end -}}
 
@@ -181,7 +208,7 @@ Return the MongoDB Secret Name
   image: {{ template "appsmith.image" . }}
   imagePullPolicy: {{ .Values.image.pullPolicy }}
   {{- if .Values.backend.containerSecurityContext.enabled }}
-  securityContext: {{- omit .Values.backend.containerSecurityContext "enabled" | toYaml | nindent 4 }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.backend.containerSecurityContext "context" $) | nindent 4 }}
   {{- end }}
   command:
     - bash
@@ -209,15 +236,25 @@ Return the MongoDB Secret Name
       value: {{ include "appsmith.mongodb.hosts" . | quote }}
     - name: APPSMITH_DATABASE_PORT_NUMBER
       value: {{ include "appsmith.mongodb.port" . | quote }}
+    {{- if .Values.usePasswordFiles }}
+    - name: APPSMITH_DATABASE_PASSWORD_FILE
+      value: {{ printf "/secrets/%s" (include "appsmith.mongodb.secretKey" .) }}
+    {{- else }}
     - name: APPSMITH_DATABASE_PASSWORD
       valueFrom:
         secretKeyRef:
           name: {{ include "appsmith.mongodb.secretName" . }}
           key: {{ include "appsmith.mongodb.secretKey" . }}
+    {{- end }}
     - name: APPSMITH_DATABASE_USER
       value: {{ ternary (index .Values.mongodb.auth.usernames 0) .Values.externalDatabase.username .Values.mongodb.enabled | quote }}
     - name: APPSMITH_DATABASE_NAME
       value: {{ ternary (index .Values.mongodb.auth.databases 0) .Values.externalDatabase.database .Values.mongodb.enabled | quote }}
+  {{- if  .Values.usePasswordFiles }}
+  volumeMounts:
+    - name: appsmith-secrets
+      mountPath: /secrets
+  {{- end }}
 {{- end -}}
 
 {{- define "appsmith.waitForBackendInitContainer" -}}
@@ -225,7 +262,7 @@ Return the MongoDB Secret Name
   image: {{ template "appsmith.image" . }}
   imagePullPolicy: {{ .Values.image.pullPolicy }}
   {{- if .Values.backend.containerSecurityContext.enabled }}
-  securityContext: {{- omit .Values.backend.containerSecurityContext "enabled" | toYaml | nindent 4 }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.backend.containerSecurityContext "context" $) | nindent 4 }}
   {{- end }}
   command:
     - bash
@@ -267,7 +304,7 @@ Return the MongoDB Secret Name
   image: {{ template "appsmith.image" . }}
   imagePullPolicy: {{ .Values.image.pullPolicy }}
   {{- if .Values.rts.containerSecurityContext.enabled }}
-  securityContext: {{- omit .Values.rts.containerSecurityContext "enabled" | toYaml | nindent 4 }}
+  securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.rts.containerSecurityContext "context" $) | nindent 4 }}
   {{- end }}
   command:
     - bash
@@ -329,8 +366,8 @@ Return the Redis Secret Name
 {{- define "appsmith.redis.secretName" -}}
 {{- if .Values.redis.enabled }}
     {{- printf "%s" (include "appsmith.redis.fullname" .) -}}
-{{- else if .Values.externalDatabase.existingSecret -}}
-    {{- printf "%s" .Values.externalDatabase.existingSecret -}}
+{{- else if .Values.externalRedis.existingSecret -}}
+    {{- printf "%s" .Values.externalRedis.existingSecret -}}
 {{- else -}}
     {{- printf "%s-externalredis" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}

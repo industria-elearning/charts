@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -7,11 +7,10 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "harbor.registry" . }}
-  namespace: {{ .Release.Namespace | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "common.images.version" ( dict "imageRoot" .Values.registry.server.image "chart" .Chart ) ) }}
+  {{- $labels := include "common.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -82,6 +81,15 @@ data:
         {{- end }}
         {{- if .Values.persistence.imageChartStorage.s3.storageClass }}
         storageclass: {{ .Values.persistence.imageChartStorage.s3.storageClass }}
+        {{- end }}
+        {{- if .Values.persistence.imageChartStorage.s3.multipartcopychunksize }}
+        multipartcopychunksize: {{ .Values.persistence.imageChartStorage.s3.multipartcopychunksize }}
+        {{- end }}
+        {{- if .Values.persistence.imageChartStorage.s3.multipartcopymaxconcurrency }}
+        multipartcopymaxconcurrency: {{ .Values.persistence.imageChartStorage.s3.multipartcopymaxconcurrency }}
+        {{- end }}
+        {{- if .Values.persistence.imageChartStorage.s3.multipartcopythresholdsize }}
+        multipartcopythresholdsize: {{ .Values.persistence.imageChartStorage.s3.multipartcopythresholdsize }}
         {{- end }}
       {{- else if eq .Values.persistence.imageChartStorage.type "swift" }}
       swift:
@@ -155,14 +163,28 @@ data:
         layerinfo: redis
       maintenance:
         uploadpurging:
+          {{- if .Values.registry.uploadPurging.enabled }}
+          enabled: true
+          age: {{ .Values.registry.uploadPurging.age }}
+          interval: {{ .Values.registry.uploadPurging.interval }}
+          dryrun: {{ .Values.registry.uploadPurging.dryrun }}
+          {{- else }}
           enabled: false
+          {{- end }}
       delete:
         enabled: true
       redirect:
         disable: {{ .Values.persistence.imageChartStorage.disableredirect }}
     redis:
-      addr: "{{ template "harbor.redis.host" . }}:{{ template "harbor.redis.port" . }}"
+      addr: "{{ template "harbor.redis.host" ( dict "context" . "component" "registry" ) }}:{{ template "harbor.redis.port" ( dict "context" . "component" "registry" ) }}"
+      {{- if ne "" (include "harbor.redis.sentinel.masterSet" ( dict "context" . "component" "registry" ) ) }}
+      sentinelMasterSet: "{{ template "harbor.redis.sentinel.masterSet" ( dict "context" . "component" "registry" ) }}"
+      {{- end }}
+      {{- $externalRedis := ternary ( get .Values.externalRedis "registry" ) .Values.externalRedis .Values.externalRedis.instancePerComponent }}
+      enableTLS: {{ or .Values.redis.tls.enabled $externalRedis.tls.enabled }}
+      {{- if not (include "harbor.redis.sentinel.enabled" ( dict "context" . "component" "registry" )) }}
       db: {{ template "harbor.redis.registryDatabaseIndex" . }}
+      {{- end }}
     http:
       relativeurls: {{ .Values.registry.relativeurls }}
       addr: :{{ ternary .Values.registry.server.containerPorts.https .Values.registry.server.containerPorts.http .Values.internalTLS.enabled }}
@@ -189,7 +211,9 @@ data:
         path: /etc/registry/passwd
     validation:
       disabled: true
-
+    compatibility:
+      schema1:
+        enabled: true
     {{- if .Values.registry.middleware.enabled }}
     {{- if eq .Values.registry.middleware.type "cloudFront" }}
     middleware:

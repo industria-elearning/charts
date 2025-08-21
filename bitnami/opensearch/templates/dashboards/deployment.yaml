@@ -1,18 +1,16 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
+{{- if (include "opensearch.dashboards.enabled" .) }}
 apiVersion: {{ include "common.capabilities.deployment.apiVersion" . }}
 kind: Deployment
 metadata:
   name: {{ template "opensearch.dashboards.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/component: dashboards
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -23,25 +21,21 @@ spec:
   {{- if .Values.dashboards.updateStrategy }}
   strategy: {{- toYaml .Values.dashboards.updateStrategy | nindent 4 }}
   {{- end }}
+  {{- $podLabels := include "common.tplvalues.merge" ( dict "values" ( list .Values.dashboards.podLabels .Values.commonLabels ) "context" . ) }}
   selector:
-    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+    matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
       app.kubernetes.io/component: dashboards
   template:
     metadata:
       {{- if .Values.dashboards.podAnnotations }}
       annotations: {{- include "common.tplvalues.render" (dict "value" .Values.dashboards.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
-      labels: {{- include "common.labels.standard" . | nindent 8 }}
+      labels: {{- include "common.labels.standard" ( dict "customLabels" $podLabels "context" $ ) | nindent 8 }}
         app.kubernetes.io/component: dashboards
-        {{- if .Values.dashboards.podLabels }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.dashboards.podLabels "context" $) | nindent 8 }}
-        {{- end }}
-        {{- if .Values.commonLabels }}
-        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
-        {{- end }}
     spec:
       serviceAccountName: {{ template "opensearch.dashboards.serviceAccountName" . }}
       {{- include "opensearch.imagePullSecrets" . | nindent 6 }}
+      automountServiceAccountToken: {{ .Values.dashboards.automountServiceAccountToken }}
       {{- if .Values.dashboards.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.dashboards.hostAliases "context" $) | nindent 8 }}
       {{- end }}
@@ -49,8 +43,8 @@ spec:
       affinity: {{- include "common.tplvalues.render" ( dict "value" .Values.dashboards.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
-        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.dashboards.podAffinityPreset "component" "dashboards" "context" $) | nindent 10 }}
-        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.dashboards.podAntiAffinityPreset "component" "dashboards" "context" $) | nindent 10 }}
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.dashboards.podAffinityPreset "component" "dashboards" "customLabels" $podLabels "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.dashboards.podAntiAffinityPreset "component" "dashboards" "customLabels" $podLabels "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.dashboards.nodeAffinityPreset.type "key" .Values.dashboards.nodeAffinityPreset.key "values" .Values.dashboards.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
       {{- if .Values.dashboards.nodeSelector }}
@@ -69,17 +63,22 @@ spec:
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.dashboards.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
       {{- if .Values.dashboards.podSecurityContext.enabled }}
-      securityContext: {{- omit .Values.dashboards.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.dashboards.podSecurityContext "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.dashboards.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ .Values.dashboards.terminationGracePeriodSeconds }}
       {{- end }}
+      initContainers:
+        {{- include "opensearch.dashboards.copy-default-plugins.initContainer" . | nindent 8 }}
+        {{- if .Values.dashboards.initContainers }}
+          {{- include "common.tplvalues.render" (dict "value" .Values.dashboards.initContainers "context" $) | nindent 8 }}
+        {{- end }}
       containers:
         - name: {{ include "opensearch.dashboards.fullname" . }}
           image: {{ template "opensearch.dashboards.image" . }}
           imagePullPolicy: {{ .Values.dashboards.image.pullPolicy }}
           {{- if .Values.dashboards.containerSecurityContext.enabled }}
-          securityContext: {{- omit .Values.dashboards.containerSecurityContext "enabled" | toYaml | nindent 12 }}
+          securityContext: {{- include "common.compatibility.renderSecurityContext" (dict "secContext" .Values.dashboards.containerSecurityContext "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.diagnosticMode.enabled }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.diagnosticMode.command "context" $) | nindent 12 }}
@@ -95,11 +94,16 @@ spec:
             - name: BITNAMI_DEBUG
               value: {{ ternary "true" "false" (or .Values.dashboards.image.debug .Values.diagnosticMode.enabled) | quote }}
             {{- if .Values.security.enabled }}
+            {{- if .Values.usePasswordFiles }}
+            - name: OPENSEARCH_DASHBOARDS_PASSWORD_FILE
+              value: "/opt/bitnami/opensearch-dashboards/secrets/opensearch-dashboards-password"
+            {{- else }}
             - name: OPENSEARCH_DASHBOARDS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "opensearch.secretName" . }}
                   key: opensearch-dashboards-password
+            {{- end }}
             {{- end }}
             {{- if .Values.dashboards.tls.enabled }}
             - name: OPENSEARCH_DASHBOARDS_SERVER_ENABLE_TLS
@@ -123,6 +127,8 @@ spec:
             {{- end }}
           {{- if .Values.dashboards.resources }}
           resources: {{- toYaml .Values.dashboards.resources | nindent 12 }}
+          {{- else if ne .Values.dashboards.resourcesPreset "none" }}
+          resources: {{- include "common.resources.preset" (dict "type" .Values.dashboards.resourcesPreset) | nindent 12 }}
           {{- end }}
           ports:
             - name: http
@@ -132,8 +138,7 @@ spec:
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.dashboards.customLivenessProbe "context" $) | nindent 12 }}
           {{- else if .Values.dashboards.livenessProbe.enabled }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.dashboards.livenessProbe "enabled") "context" $) | nindent 12 }}
-            httpGet:
-              path: "/"
+            tcpSocket:
               port: {{ .Values.dashboards.containerPorts.http }}
           {{- end }}
           {{- if .Values.dashboards.customReadinessProbe }}
@@ -157,6 +162,27 @@ spec:
           lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.dashboards.lifecycleHooks "context" $) | nindent 12 }}
           {{- end }}
           volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/opensearch-dashboards/config
+              subPath: app-conf-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/opensearch-dashboards/tmp
+              subPath: app-tmp-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/opensearch-dashboards/logs
+              subPath: app-logs-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/opensearch-dashboards/plugins
+              subPath: app-plugins-dir
+            - name: dashboards-data
+              mountPath: /bitnami/opensearch-dashboards
+            {{- if and .Values.usePasswordFiles .Values.security.enabled }}
+            - name: opensearch-dashboards-secrets
+              mountPath: /opt/bitnami/opensearch-dashboards/secrets
+            {{- end }}
             {{- if .Values.security.enabled }}
             - name: opensearch-certificates
               mountPath: /opt/bitnami/opensearch-dashboards/config/certs/opensearch
@@ -174,12 +200,29 @@ spec:
         {{- include "common.tplvalues.render" ( dict "value" .Values.dashboards.sidecars "context" $) | nindent 8 }}
         {{- end }}
       volumes:
+        - name: empty-dir
+          emptyDir: {}
+        {{- if and .Values.usePasswordFiles .Values.security.enabled }}
+        - name: opensearch-dashboards-secrets
+          secret:
+            secretName: {{ include "opensearch.secretName" . }}
+            items:
+              - key: opensearch-dashboards-password
+                path: opensearch-dashboards-password
+        {{- end }}
+        - name: dashboards-data
+        {{- if .Values.dashboards.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "opensearch.dashboards.pvc" . }}
+        {{- else }}
+          emptyDir: {}
+        {{ end }}
         {{- if .Values.security.enabled }}
         - name: opensearch-certificates
           secret:
-            secretName: {{ include "opensearch.master.tlsSecretName" . }}
+            secretName: {{ include "opensearch.node.tlsSecretName" (dict "nodeRole" "master" "context" $) }}
             items:
-              - key: ca.crt
+              - key: {{ include "opensearch.node.tlsSecretCAKey" (dict "nodeRole" "master" "context" $) }}
                 path: ca.crt
         {{- end }}
         {{- if .Values.dashboards.tls.enabled }}
@@ -193,3 +236,4 @@ spec:
         {{- if .Values.dashboards.extraVolumes }}
         {{- include "common.tplvalues.render" (dict "value" .Values.dashboards.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
+{{- end }}

@@ -2,6 +2,10 @@ CHART NAME: {{ .Chart.Name }}
 CHART VERSION: {{ .Chart.Version }}
 APP VERSION: {{ .Chart.AppVersion }}
 
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
 ** Please be patient while the chart is being deployed **
 
 1. Get the application URL by running these commands:
@@ -21,3 +25,6 @@ APP VERSION: {{ .Chart.AppVersion }}
 {{- end }}
 
 {{- include "common.warnings.rollingTag" .Values.image }}
+{{- include "common.warnings.resources" (dict "sections" (list "collector" "migration" "query") "context" $) }}
+{{- include "common.warnings.modifiedImages" (dict "images" (list .Values.image .Values.cqlshImage) "context" $) }}
+{{- include "common.errors.insecureImages" (dict "images" (list .Values.image .Values.cqlshImage) "context" $) }}

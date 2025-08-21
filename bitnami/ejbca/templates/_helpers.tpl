@@ -1,5 +1,5 @@
 {{/*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -26,6 +26,17 @@ Return the proper Docker Image Registry Secret Names
 {{- end -}}
 
 {{/*
+ Create the name of the service account to use
+ */}}
+{{- define "ejbca.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+    {{ default (include "common.names.fullname" .) .Values.serviceAccount.name }}
+{{- else -}}
+    {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return  the proper Storage Class
 */}}
 {{- define "ejbca.storageClass" -}}
@@ -40,17 +51,6 @@ Return the correct EJBCA secret.
     {{- printf "%s" .Values.existingSecret -}}
 {{- else -}}
     {{- printf "%s" (include "common.names.fullname" .) -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Return the appropriate apiVersion for ingress.
-*/}}
-{{- define "ejbca.ingress.apiVersion" -}}
-{{- if semverCompare "<1.14-0" .Capabilities.KubeVersion.GitVersion -}}
-{{- print "extensions/v1beta1" -}}
-{{- else -}}
-{{- print "networking.k8s.io/v1beta1" -}}
 {{- end -}}
 {{- end -}}
 

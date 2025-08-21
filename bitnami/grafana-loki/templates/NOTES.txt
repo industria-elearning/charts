@@ -2,6 +2,10 @@ CHART NAME: {{ .Chart.Name }}
 CHART VERSION: {{ .Chart.Version }}
 APP VERSION: {{ .Chart.AppVersion }}
 
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
 ** Please be patient while the chart is being deployed **
 
 {{- if .Values.diagnosticMode.enabled }}
@@ -20,7 +24,7 @@ Access the pod you want to debug by executing
 
 In order to replicate the container startup execute this command:
 
-    loki -config.file=/bitnami/grafana-loki/conf/loki.yaml
+    loki -config.file={{ .Values.loki.dataDir }}/conf/loki.yaml
 
 {{- else }}
 
@@ -30,8 +34,8 @@ Installed components:
   * distributor
   * querier
   * query-frontend
-  {{- if .Values.promtail.enabled }}
-  * promtail
+  {{- if .Values.grafanaalloy.enabled }}
+  * alloy
   {{- end }}
   {{- if .Values.compactor.enabled }}
   * compactor
@@ -100,5 +104,9 @@ Installed components:
 {{- end }}
 {{- end }}
 
+
 {{- include "grafana-loki.checkRollingTags" . }}
 {{- include "grafana-loki.validateValues" . }}
+{{- include "common.warnings.resources" (dict "sections" (list "compactor" "distributor" "gateway" "indexGateway" "ingester" "querier" "queryFrontend" "queryScheduler" "ruler" "tableManager" "volumePermissions") "context" $) }}
+{{- include "common.warnings.modifiedImages" (dict "images" (list .Values.loki.image .Values.gateway.image .Values.volumePermissions.image) "context" $) }}
+{{- include "common.errors.insecureImages" (dict "images" (list .Values.loki.image .Values.gateway.image .Values.volumePermissions.image) "context" $) }}

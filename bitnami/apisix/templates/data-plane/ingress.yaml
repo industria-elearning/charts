@@ -1,5 +1,5 @@
 {{- /*
-Copyright VMware, Inc.
+Copyright Broadcom, Inc. All Rights Reserved.
 SPDX-License-Identifier: APACHE-2.0
 */}}
 
@@ -9,23 +9,15 @@ kind: Ingress
 metadata:
   name: {{ template "apisix.data-plane.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
-  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
     app.kubernetes.io/part-of: apisix
     app.kubernetes.io/component: data-plane
-    {{- if .Values.commonLabels }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
-    {{- end }}
   {{- if or .Values.dataPlane.ingress.annotations .Values.commonAnnotations }}
-  annotations:
-    {{- if .Values.dataPlane.ingress.annotations }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.dataPlane.ingress.annotations "context" $) | nindent 4 }}
-    {{- end }}
-    {{- if .Values.commonAnnotations }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
-    {{- end }}
+  {{- $annotations := include "common.tplvalues.merge" ( dict "values" ( list .Values.dataPlane.ingress.annotations .Values.commonAnnotations ) "context" . ) }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and .Values.dataPlane.ingress.ingressClassName (eq "true" (include "common.ingress.supportsIngressClassname" .)) }}
+  {{- if .Values.dataPlane.ingress.ingressClassName }}
   ingressClassName: {{ .Values.dataPlane.ingress.ingressClassName | quote }}
   {{- end }}
   rules:
@@ -37,9 +29,7 @@ spec:
           {{- toYaml .Values.dataPlane.ingress.extraPaths | nindent 10 }}
           {{- end }}
           - path: {{ .Values.dataPlane.ingress.path }}
-            {{- if eq "true" (include "common.ingress.supportsPathType" .) }}
             pathType: {{ .Values.dataPlane.ingress.pathType }}
-            {{- end }}
             backend: {{- include "common.ingress.backend" (dict "serviceName" (include "apisix.data-plane.fullname" . | trunc 63 | trimSuffix "-") "servicePort" "http" "context" $)  | nindent 14 }}
     {{- end }}
     {{- range .Values.dataPlane.ingress.extraHosts }}
@@ -47,9 +37,7 @@ spec:
       http:
         paths:
           - path: {{ default "/" .path }}
-            {{- if eq "true" (include "common.ingress.supportsPathType" $) }}
             pathType: {{ default "ImplementationSpecific" .pathType }}
-            {{- end }}
             backend: {{- include "common.ingress.backend" (dict "serviceName" (include "apisix.data-plane.fullname" $ | trunc 63 | trimSuffix "-") "servicePort" "http" "context" $) | nindent 14 }}
     {{- end }}
     {{- if .Values.dataPlane.ingress.extraRules }}
