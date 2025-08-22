@@ -96,8 +96,8 @@ entries:
     sources:
     - https://github.com/bitnami/charts/tree/main/bitnami/moodle
     urls:
-    - moodle/moodle-28.0.0.tgz
-    version: 28.0.0
+    - moodle/moodle-28.0.1.tgz
+    version: 28.0.1
   - annotations:
       category: E-Learning
       licenses: Apache-2.0
