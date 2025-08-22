@@ -1,0 +1,137 @@
+apiVersion: v1
+entries:
+  common:
+  - annotations:
+      category: Infrastructure
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: 2.6.0
+    created: "2024-08-27T19:28:18.1812775-05:00"
+    description: A Library Helm Chart for grouping common logic between bitnami charts.
+      This chart is not deployable by itself.
+    digest: 64fb3a16f648a52e9923759571452836b0906dedfd6e65e4949e3bdd7bddfbdc
+    home: https://bitnami.com
+    icon: https://bitnami.com/downloads/logos/bitnami-mark.png
+    keywords:
+    - common
+    - helper
+    - template
+    - function
+    - bitnami
+    maintainers:
+    - name: VMware, Inc.
+      url: https://github.com/bitnami/charts
+    name: common
+    sources:
+    - https://github.com/bitnami/charts
+    type: library
+    urls:
+    - charts/common-2.6.0.tgz
+    version: 2.6.0
+  mariadb:
+  - annotations:
+      category: Database
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: 11.0.2
+    created: "2024-08-27T19:28:18.182285-05:00"
+    dependencies:
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: MariaDB is an open source, community-developed SQL database server
+      that is widely in use around the world due to its enterprise features, flexibility,
+      and collaboration with leading tech firms.
+    digest: 0ee96e484abfb059c6abf03f1245d4f1fdbaaf0fbee107f5a820e1e85c8bdc10
+    home: https://bitnami.com
+    icon: https://bitnami.com/assets/stacks/mariadb/img/mariadb-stack-220x234.png
+    keywords:
+    - mariadb
+    - mysql
+    - database
+    - sql
+    - prometheus
+    maintainers:
+    - name: VMware, Inc.
+      url: https://github.com/bitnami/charts
+    name: mariadb
+    sources:
+    - https://github.com/bitnami/charts/tree/main/bitnami/mariadb
+    urls:
+    - charts/mariadb-22.0.0.tgz
+    version: 22.0.0
+  moodle:
+  - annotations:
+      category: E-Learning
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: 4.2.1
+    created: "2024-08-27T19:28:18.1802706-05:00"
+    dependencies:
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 13.x.x
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: Moodle(TM) LMS is an open source online Learning Management System
+      widely used at universities, schools, and corporations. It is modular and highly
+      adaptable to any type of online learning.
+    digest: b9be1b6221edc1c9cf642f787f05ddf584294b9bc94a47079997964f7a84f05e
+    home: https://bitnami.com
+    icon: https://bitnami.com/assets/stacks/moodle/img/moodle-stack-220x234.png
+    keywords:
+    - moodle
+    - learning
+    - php
+    maintainers:
+    - name: VMware, Inc.
+      url: https://github.com/bitnami/charts
+    name: moodle
+    sources:
+    - https://github.com/bitnami/charts/tree/main/bitnami/moodle
+    urls:
+    - moodle/moodle-28.0.0.tgz
+    version: 28.0.0
+  - annotations:
+      category: E-Learning
+      licenses: Apache-2.0
+    apiVersion: v2
+    appVersion: 4.1.2
+    created: "2024-08-27T19:28:18.1776164-05:00"
+    dependencies:
+    - condition: mariadb.enabled
+      name: mariadb
+      repository: https://charts.bitnami.com/bitnami
+      version: 11.x.x
+    - name: common
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - bitnami-common
+      version: 2.x.x
+    description: Moodle(TM) LMS is an open source online Learning Management System
+      widely used at universities, schools, and corporations. It is modular and highly
+      adaptable to any type of online learning.
+    digest: ffd13b3061d76e18d32001c36b19e7d732632b5d994ceb8440daccf167bb7a10
+    home: https://github.com/bitnami/charts/tree/main/bitnami/moodle
+    icon: https://bitnami.com/assets/stacks/moodle/img/moodle-stack-220x234.png
+    keywords:
+    - moodle
+    - learning
+    - php
+    maintainers:
+    - name: Bitnami
+      url: https://github.com/bitnami/charts
+    name: moodle
+    sources:
+    - https://github.com/bitnami/containers/tree/main/bitnami/moodle
+    - https://www.moodle.org/
+    urls:
+    - moodle/moodle-14.3.13.tgz
+    version: 14.3.13
+generated: "2024-08-27T19:28:18.1719178-05:00"
