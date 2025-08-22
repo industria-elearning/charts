@@ -2,6 +2,10 @@ CHART NAME: {{ .Chart.Name }}
 CHART VERSION: {{ .Chart.Version }}
 APP VERSION: {{ .Chart.AppVersion }}
 
+⚠ WARNING: Since August 28th, 2025, only a limited subset of images/charts are available for free.
+    Subscribe to Bitnami Secure Images to receive continued support and security updates.
+    More info at https://bitnami.com and https://github.com/bitnami/containers/issues/83267
+
 {{- if or .Values.mariadb.enabled .Values.externalDatabase.host -}}
 
 ** Please be patient while the chart is being deployed **
@@ -97,3 +101,6 @@ You can access Apache Prometheus metrics following the steps below:
 {{- $passwordValidationErrors = append $passwordValidationErrors $mariadbPasswordValidationErrors -}}
 
 {{- include "common.errors.upgrade.passwords.empty" (dict "validationErrors" $passwordValidationErrors "context" $) -}}
+{{- include "common.warnings.resources" (dict "sections" (list "metrics" "" "volumePermissions") "context" $) }}
+{{- include "common.warnings.modifiedImages" (dict "images" (list .Values.image .Values.volumePermissions.image .Values.metrics.image .Values.certificates.image) "context" $) }}
+{{- include "common.errors.insecureImages" (dict "images" (list .Values.image .Values.volumePermissions.image .Values.metrics.image .Values.certificates.image) "context" $) }}
