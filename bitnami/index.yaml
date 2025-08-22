@@ -73,7 +73,7 @@ entries:
     - condition: mariadb.enabled
       name: mariadb
       repository: oci://registry-1.docker.io/bitnamicharts
-      version: 13.x.x
+      version: 22.x.x
     - name: common
       repository: oci://registry-1.docker.io/bitnamicharts
       tags:
@@ -132,6 +132,6 @@ entries:
     - https://github.com/bitnami/containers/tree/main/bitnami/moodle
     - https://www.moodle.org/
     urls:
-    - moodle/moodle-14.3.13.tgz
-    version: 14.3.13
+    - moodle/moodle-28.0.0.tgz
+    version: 28.0.0
 generated: "2024-08-27T19:28:18.1719178-05:00"
